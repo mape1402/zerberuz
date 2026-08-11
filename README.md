@@ -86,6 +86,12 @@ Run the host:
 dotnet run --urls http://localhost:5000
 ```
 
+Open the admin UI:
+
+```text
+http://localhost:5000/zerberuz
+```
+
 The package maps these endpoints:
 
 ```text
@@ -96,6 +102,15 @@ GET  /api/v1/diagnostics/{diagnosticId}
 GET  /api/v1/profiles/{profile}/versions/{version}/diagnostics/{diagnosticId}/help
 POST /api/v1/rules/validate
 POST /api/v1/profiles/{profile}/versions
+```
+
+It also maps Razor Pages for server-side administration:
+
+```text
+GET  /zerberuz
+GET  /zerberuz/profiles/{profile}/versions/{version}
+GET  /zerberuz/publish
+POST /zerberuz/publish
 ```
 
 Disable the demo seed data for production hosts:
@@ -226,6 +241,8 @@ zerberuz rules publish ./rules/backend.json --server http://localhost:5000
 ```
 
 The server validates the payload again, rejects duplicate `profile@rulesVersion` pairs, persists the rule profile with EF, and returns the published version metadata with a SHA-256 hash.
+
+The same publish flow is available in the admin UI at `/zerberuz/publish`.
 
 ## Sync Rules
 

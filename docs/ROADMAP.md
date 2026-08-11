@@ -11,6 +11,7 @@ The platform should own:
 - Roslyn analyzer execution.
 - Rule schema and validation.
 - Local deterministic rule cache.
+- Shared machine/team cache for reused rule downloads across repositories.
 - CLI synchronization and diagnostics tooling.
 - Remote profile/version governance.
 - Diagnostic help pages.
@@ -53,6 +54,7 @@ The platform should own:
 - Add `zerberuz explain`.
 - Add atomic cache writes.
 - Add offline help cache.
+- Resolve shared cache from `zerberuz.json`, CLI options, environment, or OS defaults.
 
 ### v0.4 - Server MVP
 
@@ -80,8 +82,8 @@ The platform should own:
 
 ## Immediate Next Steps
 
-1. Add empty project shells and restore/build validation.
-2. Define the first rule schema contracts.
-3. Implement analyzer test harness.
-4. Build the first naming rule vertical slice.
-5. Add `zerberuz explain ZBZ001` using cached help content.
+1. Add `sync-rules` support for remote server endpoints once the server MVP exists.
+2. Add `doctor` checks for analyzer package wiring in consuming projects.
+3. Add cache hash/signature metadata.
+4. Add server profile/version endpoints.
+5. Add CI examples using pinned rule versions.

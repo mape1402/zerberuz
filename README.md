@@ -45,12 +45,38 @@ Zerberuz should download declarative rule definitions, not executable analyzer l
 Initialize a repository:
 
 ```bash
-zerberuz init --profile backend-clean-architecture
-zerberuz sync-rules
+zerberuz init --team elysium --profile backend-clean-architecture
+zerberuz sync-rules --source ./rules/backend-clean-architecture.json
 dotnet build
 ```
 
-The analyzer reads `.zerberuz/rules-cache.json` and reports diagnostics such as:
+The CLI writes rules into a shared machine/team cache, then the analyzer reads that local cache through `zerberuz.json`. No analyzer callback calls the network.
+
+Default shared cache resolution:
+
+```text
+--cache-root
+zerberuz.json: cacheRoot
+ZERBERUZ_CACHE_ROOT
+OS default
+```
+
+OS defaults:
+
+```text
+Windows: %LOCALAPPDATA%/Zerberuz/cache
+Linux/macOS: ~/.zerberuz/cache
+```
+
+Shared cache layout:
+
+```text
+<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/rules-cache.json
+<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/help/ZBZ001.md
+<cacheRoot>/teams/<team>/profiles/<profile>/latest-compatible.json
+```
+
+The analyzer reports diagnostics such as:
 
 ```text
 ZBZ001: Interface 'Repository' must start with 'I'.
@@ -61,6 +87,8 @@ Each diagnostic should include a help link and be explainable from the CLI:
 
 ```bash
 zerberuz explain ZBZ001
+zerberuz explain ZBZ001 --offline
+zerberuz doctor
 ```
 
 ## Rule Configuration
@@ -95,7 +123,7 @@ Example rule cache payload:
 - Analyzer execution must be deterministic.
 - The analyzer must not call remote services from Roslyn callbacks.
 - Rule definitions are data, not executable code.
-- Local cache files are immutable inputs during analysis.
+- Shared local cache files are immutable inputs during analysis.
 - `.editorconfig` owns severity overrides.
 - Every diagnostic should have useful human-facing help.
 - Performance budgets are part of acceptance criteria.

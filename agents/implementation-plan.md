@@ -9,12 +9,12 @@ The core principle is:
 ```text
 Analyzer package = execution engine
 Remote rules = policy
-Local cache = deterministic analysis input
+Shared local cache = deterministic analysis input
 CLI = sync, validation, diagnostics, CI integration
 Server = governance, versioning, distribution
 ```
 
-Zerberuz should not download executable code during analysis. It should download declarative rule definitions, validate them, cache them locally, and run a deterministic analyzer engine against those definitions.
+Zerberuz should not download executable code during analysis. It should download declarative rule definitions, validate them, cache them in a shared local team/profile cache, and run a deterministic analyzer engine against those definitions.
 
 ## 2. Product Goals
 
@@ -26,7 +26,7 @@ Zerberuz should not download executable code during analysis. It should download
 - Support centralized rule management.
 - Keep IDE analysis fast and non-blocking.
 - Keep CI builds deterministic and reproducible.
-- Work offline using a local rule cache.
+- Work offline using a shared local rule cache.
 - Provide clear diagnostics with actionable messages.
 - Support gradual adoption through severity levels and rule scopes.
 
@@ -181,6 +181,7 @@ Run dotnet test
 ```text
 Analyzer starts
 Analyzer checks local config
+Analyzer resolves shared team/profile cache
 Analyzer loads local cache
 Analyzer applies latest compatible cached rule set
 If cache is missing, analyzer emits one configuration diagnostic
@@ -198,7 +199,8 @@ Example:
   "rulesVersion": "2026.08.11",
   "mode": "locked",
   "rulesEndpoint": "https://rules.zerberuz.dev",
-  "cachePath": ".zerberuz/rules-cache.json",
+  "team": "elysium",
+  "cacheRoot": null,
   "diagnostics": {
     "defaultSeverity": "warning"
   }
@@ -414,19 +416,47 @@ zerberuz sync-rules
   -> downloads remote rules
   -> validates schema
   -> verifies hash/signature
-  -> writes local cache atomically
+  -> writes shared local cache atomically
 
 dotnet build
+  -> analyzer reads zerberuz.json
+  -> analyzer resolves shared cache path
   -> analyzer reads local cache
   -> analyzer reports diagnostics deterministically
 ```
 
-### Cache File
+### Shared Cache Files
 
-Recommended path:
+Cache root resolution order:
 
 ```text
-.zerberuz/rules-cache.json
+--cache-root CLI option
+zerberuz.json cacheRoot
+ZERBERUZ_CACHE_ROOT
+OS default
+```
+
+OS defaults:
+
+```text
+Windows: %LOCALAPPDATA%/Zerberuz/cache
+Linux/macOS: ~/.zerberuz/cache
+```
+
+Recommended layout:
+
+```text
+<cacheRoot>/
+  teams/
+    <team>/
+      profiles/
+        <profile>/
+          versions/
+            <rulesVersion>/
+              rules-cache.json
+              help/
+                ZBZ001.md
+          latest-compatible.json
 ```
 
 Recommended cache metadata:
@@ -624,8 +654,8 @@ The CLI may:
 Recommended cache path:
 
 ```text
-.zerberuz/help/ZBZ001.md
-.zerberuz/help/ZBZ002.md
+<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/help/ZBZ001.md
+<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/help/ZBZ002.md
 ```
 
 This gives developers useful explanations even without network access.
@@ -983,7 +1013,7 @@ This proves the entire architecture without overbuilding the server too early.
 
 - A sample project can install `Zerberuz.Analyzers`.
 - `zerberuz init` creates config.
-- `zerberuz sync-rules` creates `.zerberuz/rules-cache.json`.
+- `zerberuz sync-rules` creates a shared cache under the resolved team/profile cache root.
 - `dotnet build` emits `ZBZ001` for a naming violation.
 - `dotnet build` emits `ZBZ100` for a folder violation.
 - Diagnostics include help links.

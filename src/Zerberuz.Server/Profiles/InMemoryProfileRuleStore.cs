@@ -11,7 +11,7 @@ public sealed class InMemoryProfileRuleStore : IProfileRuleStore
     {
     }
 
-    public InMemoryProfileRuleStore(IEnumerable<RuleSetDefinition> ruleSets)
+    internal InMemoryProfileRuleStore(IEnumerable<RuleSetDefinition> ruleSets)
     {
         profiles = new Dictionary<string, SortedDictionary<string, RuleSetDefinition>>(StringComparer.OrdinalIgnoreCase);
 

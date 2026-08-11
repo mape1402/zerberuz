@@ -97,6 +97,54 @@ public sealed class CliApplicationTests
     }
 
     [Fact]
+    public void Run_sync_rules_accepts_server_profile_response_payload()
+    {
+        var tempRoot = CreateTempDirectory();
+        try
+        {
+            var configPath = Path.Combine(tempRoot, "zerberuz.json");
+            var sourcePath = Path.Combine(tempRoot, "server-response.json");
+            var cacheRoot = Path.Combine(tempRoot, "cache");
+
+            File.WriteAllText(configPath, """
+            {
+              "team": "elysium",
+              "profile": "backend",
+              "rulesVersion": "latest-compatible"
+            }
+            """);
+
+            File.WriteAllText(sourcePath, $$"""
+            {
+              "profile": "backend",
+              "rulesVersion": "2026.08.11",
+              "schemaVersion": "1.0",
+              "minimumEngineVersion": "1.0.0",
+              "sha256": "abc123",
+              "ruleSet": {{ValidRuleSet}}
+            }
+            """);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var exitCode = new CliApplication().Run(
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                output,
+                error,
+                File.Exists,
+                File.ReadAllText);
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("Synced elysium/backend@2026.08.11", output.ToString());
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Run_sync_rules_does_not_replace_cache_when_source_is_invalid()
     {
         var tempRoot = CreateTempDirectory();

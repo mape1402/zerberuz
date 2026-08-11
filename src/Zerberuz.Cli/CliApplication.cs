@@ -1,11 +1,23 @@
 using Zerberuz.Analyzers.Configuration;
 using Zerberuz.Analyzers.Rules;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Zerberuz.Server.Contracts;
 
 namespace Zerberuz.Cli;
 
 public sealed class CliApplication
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    static CliApplication()
+    {
+        JsonOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+    }
+
     public int Run(string[] args)
     {
         return Run(
@@ -75,11 +87,12 @@ public sealed class CliApplication
 
     private static int SyncRules(string[] args, TextWriter output, TextWriter error)
     {
-        var source = ResolveOption(args, "--source");
+        var source = ResolveSyncSource(args);
         if (string.IsNullOrWhiteSpace(source))
         {
             error.WriteLine("Rule source is required.");
             error.WriteLine("Usage: zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+            error.WriteLine("   or: zerberuz sync-rules --server <url> --profile <name> [--version latest-compatible]");
             return 6;
         }
 
@@ -92,7 +105,7 @@ public sealed class CliApplication
 
         var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
         var payload = ReadSource(source);
-        var ruleSet = new RuleSetCacheLoader().Load(payload);
+        var ruleSet = ReadRuleSetPayload(payload);
         var validation = new RuleSetValidator().Validate(ruleSet);
         if (!validation.IsValid)
         {
@@ -114,7 +127,8 @@ public sealed class CliApplication
             effectiveConfiguration,
             ResolveOption(args, "--cache-root"));
 
-        AtomicWriteValidatedRuleSet(paths.RulesCachePath, payload);
+        var ruleSetPayload = JsonSerializer.Serialize(ruleSet, JsonOptions);
+        AtomicWriteValidatedRuleSet(paths.RulesCachePath, ruleSetPayload);
         ExportHelpMarkdown(paths.HelpDirectory, ruleSet!.Help);
         AtomicWriteText(
             paths.LatestCompatiblePointerPath,
@@ -131,6 +145,40 @@ public sealed class CliApplication
         output.WriteLine($"Synced {paths.Team}/{paths.Profile}@{paths.RulesVersion}");
         output.WriteLine($"Cache: {paths.RulesCachePath}");
         return 0;
+    }
+
+    private static string? ResolveSyncSource(string[] args)
+    {
+        var source = ResolveOption(args, "--source");
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            return source;
+        }
+
+        var server = ResolveOption(args, "--server");
+        var profile = ResolveOption(args, "--profile");
+        if (string.IsNullOrWhiteSpace(server) || string.IsNullOrWhiteSpace(profile))
+        {
+            return null;
+        }
+
+        var version = ResolveOption(args, "--version") ?? "latest-compatible";
+        var baseUri = server.TrimEnd('/');
+        return string.Equals(version, "latest-compatible", StringComparison.OrdinalIgnoreCase)
+            ? $"{baseUri}/api/v1/profiles/{Uri.EscapeDataString(profile)}/latest-compatible?engineVersion=1.0.0"
+            : $"{baseUri}/api/v1/profiles/{Uri.EscapeDataString(profile)}/versions/{Uri.EscapeDataString(version)}";
+    }
+
+    private static RuleSetDefinition? ReadRuleSetPayload(string payload)
+    {
+        var serverResponse = JsonSerializer.Deserialize<RuleProfileResponse>(payload, JsonOptions);
+        if (serverResponse?.RuleSet is not null &&
+            !string.IsNullOrWhiteSpace(serverResponse.RuleSet.RulesVersion))
+        {
+            return serverResponse.RuleSet;
+        }
+
+        return new RuleSetCacheLoader().Load(payload);
     }
 
     private static int Doctor(string[] args, TextWriter output, TextWriter error)
@@ -285,7 +333,7 @@ public sealed class CliApplication
 
     private static void AtomicWriteValidatedRuleSet(string path, string content)
     {
-        var parsed = new RuleSetCacheLoader().Load(content);
+        var parsed = ReadRuleSetPayload(content);
         var validation = new RuleSetValidator().Validate(parsed);
         if (!validation.IsValid)
         {
@@ -458,6 +506,7 @@ public sealed class CliApplication
         output.WriteLine("Usage:");
         output.WriteLine("  zerberuz init [--team default] [--profile default] [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+        output.WriteLine("  zerberuz sync-rules --server <url> --profile <name> [--version latest-compatible]");
         output.WriteLine("  zerberuz doctor [--config-path zerberuz.json] [--cache-root <path>]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
         output.WriteLine("  zerberuz explain ZBZ001 --offline [--config-path zerberuz.json] [--cache-root <path>]");

@@ -31,7 +31,8 @@ public sealed class AdminUiPageTests : IClassFixture<WebApplicationFactory<Progr
 
         var html = await client.GetStringAsync("/zerberuz/profiles/backend/versions/2026.08.11");
 
-        Assert.Contains("backend 2026.08.11", html);
+        Assert.Contains("backend", html);
+        Assert.Contains("2026.08.11", html);
         Assert.Contains("ZBZ001", html);
         Assert.Contains("ZBZ100", html);
     }

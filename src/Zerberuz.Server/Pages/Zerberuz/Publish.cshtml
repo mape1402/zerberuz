@@ -4,7 +4,13 @@
     ViewData["Title"] = "Publish";
 }
 
-<h1>Publish Rule Profile</h1>
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Ruleset Intake</p>
+        <h1>Publish Rule Profile</h1>
+        <p class="muted">Paste a validated Zerberuz ruleset. The server validates again and rejects duplicate profile/version pairs.</p>
+    </div>
+</div>
 
 @if (!string.IsNullOrWhiteSpace(Model.Message))
 {
@@ -13,10 +19,25 @@
 
 <form method="post">
     @Html.AntiForgeryToken()
-    <label for="RuleSetJson"><strong>Rule set JSON</strong></label>
-    <textarea id="RuleSetJson" name="RuleSetJson">@Model.RuleSetJson</textarea>
-    <div class="toolbar">
-        <button class="button" type="submit">Publish</button>
-        <a class="button secondary" href="/zerberuz">Cancel</a>
+    <div class="form-shell">
+        <section class="panel">
+            <div class="panel-header">
+                <strong>Rule set JSON</strong>
+                <span class="muted">profile + rulesVersion must be unique</span>
+            </div>
+            <textarea id="RuleSetJson" name="RuleSetJson" spellcheck="false">@Model.RuleSetJson</textarea>
+        </section>
+        <aside class="aside">
+            <strong>Before publishing</strong>
+            <ul class="muted">
+                <li>Use a new immutable rulesVersion.</li>
+                <li>Keep rules declarative; analyzer code stays packaged.</li>
+                <li>Add help for every diagnostic id.</li>
+            </ul>
+            <div class="toolbar">
+                <button class="button warn" type="submit">Publish</button>
+                <a class="button secondary" href="/zerberuz">Cancel</a>
+            </div>
+        </aside>
     </div>
 </form>

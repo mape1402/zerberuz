@@ -11,54 +11,58 @@
 }
 else
 {
-    <h1>@Model.RuleSet.Profile @Model.RuleSet.RulesVersion</h1>
-
-    <div class="toolbar">
-        <a class="button secondary" href="/zerberuz">Back to profiles</a>
-        <a class="button secondary" href="/api/v1/profiles/@Uri.EscapeDataString(Model.RuleSet.Profile)/versions/@Uri.EscapeDataString(Model.RuleSet.RulesVersion)">Open API response</a>
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Rule Profile</p>
+            <h1>@Model.RuleSet.Profile</h1>
+            <p class="muted">Version <span class="pill amber">@Model.RuleSet.RulesVersion</span></p>
+        </div>
+        <div class="toolbar">
+            <a class="button secondary" href="/zerberuz">Back</a>
+            <a class="button" href="/api/v1/profiles/@Uri.EscapeDataString(Model.RuleSet.Profile)/versions/@Uri.EscapeDataString(Model.RuleSet.RulesVersion)">API JSON</a>
+        </div>
     </div>
 
-    <table>
-        <tbody>
-            <tr>
-                <th>Schema</th>
-                <td>@Model.RuleSet.SchemaVersion</td>
-            </tr>
-            <tr>
-                <th>Minimum engine</th>
-                <td>@Model.RuleSet.MinimumEngineVersion</td>
-            </tr>
-            <tr>
-                <th>Rules</th>
-                <td>@Model.RuleSet.Rules.Count</td>
-            </tr>
-            <tr>
-                <th>Help topics</th>
-                <td>@Model.RuleSet.Help.Count</td>
-            </tr>
-        </tbody>
-    </table>
+    <section class="stats">
+        <div class="stat">
+            <strong>@Model.RuleSet.Rules.Count</strong>
+            <span>Rules</span>
+        </div>
+        <div class="stat">
+            <strong>@Model.RuleSet.Help.Count</strong>
+            <span>Help topics</span>
+        </div>
+        <div class="stat">
+            <strong>@Model.RuleSet.SchemaVersion</strong>
+            <span>Schema</span>
+        </div>
+    </section>
 
-    <h2>Rules</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Severity</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var rule in Model.RuleSet.Rules)
-            {
+    <section class="panel">
+        <div class="panel-header">
+            <strong>Rules</strong>
+            <span class="muted">Minimum engine: @Model.RuleSet.MinimumEngineVersion</span>
+        </div>
+        <table>
+            <thead>
                 <tr>
-                    <td><code>@rule.Id</code></td>
-                    <td>@rule.Title</td>
-                    <td>@rule.Type</td>
-                    <td>@rule.Severity</td>
+                    <th>Id</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Severity</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var rule in Model.RuleSet.Rules)
+                {
+                    <tr>
+                        <td><span class="pill">@rule.Id</span></td>
+                        <td>@rule.Title</td>
+                        <td>@rule.Type</td>
+                        <td>@rule.Severity</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
 }

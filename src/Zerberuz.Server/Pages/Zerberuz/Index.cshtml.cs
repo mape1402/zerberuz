@@ -14,6 +14,12 @@ public sealed class IndexModel : PageModel
 
     public IList<ProfileSummary> Profiles { get; } = new List<ProfileSummary>();
 
+    public int ProfileCount => Profiles.Count;
+
+    public int VersionCount => Profiles.Sum(profile => profile.Versions.Count);
+
+    public int LatestVersionCount => Profiles.Count(profile => profile.Versions.Count > 0);
+
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         var profiles = await store.GetProfilesAsync(cancellationToken).ConfigureAwait(false);

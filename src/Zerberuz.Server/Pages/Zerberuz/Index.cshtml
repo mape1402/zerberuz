@@ -4,38 +4,70 @@
     ViewData["Title"] = "Profiles";
 }
 
-<h1>Rule Profiles</h1>
-
-<div class="toolbar">
-    <a class="button" href="/zerberuz/publish">Publish rule profile</a>
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Server Governance</p>
+        <h1>Rule Profiles</h1>
+        <p class="muted">Versioned analyzer policies published to this Zerberuz server.</p>
+    </div>
+    <a class="button warn" href="/zerberuz/publish">Publish profile</a>
 </div>
+
+<section class="stats">
+    <div class="stat">
+        <strong>@Model.ProfileCount</strong>
+        <span>Profiles</span>
+    </div>
+    <div class="stat">
+        <strong>@Model.VersionCount</strong>
+        <span>Published versions</span>
+    </div>
+    <div class="stat">
+        <strong>@Model.LatestVersionCount</strong>
+        <span>Latest pointers</span>
+    </div>
+</section>
 
 @if (Model.Profiles.Count == 0)
 {
-    <p class="muted">No rule profiles have been published yet.</p>
+    <div class="empty">
+        <strong>No rule profiles yet.</strong>
+        <p class="muted">Publish your first ruleset JSON to start serving analyzer policy.</p>
+    </div>
 }
 else
 {
-    <table>
-        <thead>
-            <tr>
-                <th>Profile</th>
-                <th>Versions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var profile in Model.Profiles)
-            {
+    <section class="panel">
+        <div class="panel-header">
+            <strong>Published Profiles</strong>
+            <span class="muted">Click a version to inspect its rules.</span>
+        </div>
+        <table>
+            <thead>
                 <tr>
-                    <td><strong>@profile.Name</strong></td>
-                    <td>
-                        @foreach (var version in profile.Versions)
-                        {
-                            <a href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(version)">@version</a><br />
-                        }
-                    </td>
+                    <th>Profile</th>
+                    <th>Versions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var profile in Model.Profiles)
+                {
+                    <tr>
+                        <td>
+                            <strong>@profile.Name</strong><br />
+                            <span class="muted">@profile.Versions.Count version(s)</span>
+                        </td>
+                        <td>
+                            <span class="version-list">
+                                @foreach (var version in profile.Versions)
+                                {
+                                    <a class="pill" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(version)">@version</a>
+                                }
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
 }

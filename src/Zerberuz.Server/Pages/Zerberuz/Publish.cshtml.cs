@@ -46,6 +46,18 @@ public sealed class PublishModel : PageModel
                 SymbolKind = ZerberuzSymbolKind.Interface,
                 MustStartWith = "I",
                 Message = "Interface names must start with I.",
+                HelpMarkdown = """
+                ## Summary
+                Interfaces are easier to scan when they follow the team naming convention.
+
+                ## Fix
+                - Rename the interface so it starts with `I`.
+                - Update references.
+
+                ```csharp
+                public interface ICustomerRepository { }
+                ```
+                """,
                 HelpSummary = "Interfaces are easier to scan when they follow the team naming convention.",
                 HelpWhy = "Consistent names reduce friction during reviews and refactors.",
                 HelpTrigger = "An interface name does not start with I.",
@@ -135,6 +147,7 @@ public sealed class PublishModel : PageModel
             {
                 DiagnosticId = rule.Id.Trim(),
                 Title = string.IsNullOrWhiteSpace(rule.HelpTitle) ? rule.Title.Trim() : rule.HelpTitle.Trim(),
+                Markdown = rule.HelpMarkdown.Trim(),
                 Summary = rule.HelpSummary.Trim(),
                 Why = rule.HelpWhy.Trim(),
                 Trigger = rule.HelpTrigger.Trim(),
@@ -205,6 +218,8 @@ public sealed class PublishModel : PageModel
         public string HelpUrl { get; set; } = string.Empty;
 
         public string HelpTitle { get; set; } = string.Empty;
+
+        public string HelpMarkdown { get; set; } = string.Empty;
 
         public string HelpSummary { get; set; } = string.Empty;
 

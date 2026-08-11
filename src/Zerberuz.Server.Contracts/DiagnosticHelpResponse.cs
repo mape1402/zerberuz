@@ -9,4 +9,6 @@ public sealed class DiagnosticHelpResponse
     public string RulesVersion { get; set; } = string.Empty;
 
     public DiagnosticHelpDefinition Help { get; set; } = new();
+
+    public string HelpHtml { get; set; } = string.Empty;
 }

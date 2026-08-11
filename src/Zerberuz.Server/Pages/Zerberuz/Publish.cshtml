@@ -45,6 +45,7 @@
                 <input name="Rules[@index].NamespaceMustContain" value="@rule.NamespaceMustContain" data-field="NamespaceMustContain" />
                 <input name="Rules[@index].HelpUrl" value="@rule.HelpUrl" data-field="HelpUrl" />
                 <input name="Rules[@index].HelpTitle" value="@rule.HelpTitle" data-field="HelpTitle" />
+                <input name="Rules[@index].HelpMarkdown" value="@rule.HelpMarkdown" data-field="HelpMarkdown" />
                 <input name="Rules[@index].HelpSummary" value="@rule.HelpSummary" data-field="HelpSummary" />
                 <input name="Rules[@index].HelpWhy" value="@rule.HelpWhy" data-field="HelpWhy" />
                 <input name="Rules[@index].HelpTrigger" value="@rule.HelpTrigger" data-field="HelpTrigger" />
@@ -244,9 +245,29 @@
 
             <details>
                 <summary>Help content</summary>
+                <div class="form-grid">
+                    <div>
+                        <label for="modal-HelpMarkdownFile">Upload Markdown</label>
+                        <input id="modal-HelpMarkdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" />
+                    </div>
+                    <div>
+                        <label for="modal-HelpTitle">Help title</label>
+                        <input id="modal-HelpTitle" data-modal-field="HelpTitle" />
+                    </div>
+                    <div>
+                        <label for="modal-RelatedDiagnostics">Related diagnostics</label>
+                        <input id="modal-RelatedDiagnostics" data-modal-field="RelatedDiagnostics" placeholder="ZBZ002, ZBZ003" />
+                    </div>
+                </div>
                 <div class="form-grid two">
-                    <div><label for="modal-HelpTitle">Help title</label><input id="modal-HelpTitle" data-modal-field="HelpTitle" /></div>
-                    <div><label for="modal-RelatedDiagnostics">Related diagnostics</label><input id="modal-RelatedDiagnostics" data-modal-field="RelatedDiagnostics" placeholder="ZBZ002, ZBZ003" /></div>
+                    <div>
+                        <label for="modal-HelpMarkdown">Markdown</label>
+                        <textarea id="modal-HelpMarkdown" data-modal-field="HelpMarkdown" placeholder="## Summary&#10;Explain the diagnostic here."></textarea>
+                    </div>
+                    <div>
+                        <label>Preview</label>
+                        <div class="markdown-preview" id="modal-HelpMarkdownPreview"></div>
+                    </div>
                     <div><label for="modal-HelpSummary">Summary</label><textarea id="modal-HelpSummary" data-modal-field="HelpSummary"></textarea></div>
                     <div><label for="modal-HelpWhy">Why it matters</label><textarea id="modal-HelpWhy" data-modal-field="HelpWhy"></textarea></div>
                     <div><label for="modal-HelpTrigger">Trigger</label><textarea id="modal-HelpTrigger" data-modal-field="HelpTrigger"></textarea></div>
@@ -285,6 +306,7 @@
         <input name="Rules[__index__].NamespaceMustContain" value="" data-field="NamespaceMustContain" />
         <input name="Rules[__index__].HelpUrl" value="" data-field="HelpUrl" />
         <input name="Rules[__index__].HelpTitle" value="" data-field="HelpTitle" />
+        <input name="Rules[__index__].HelpMarkdown" value="" data-field="HelpMarkdown" />
         <input name="Rules[__index__].HelpSummary" value="" data-field="HelpSummary" />
         <input name="Rules[__index__].HelpWhy" value="" data-field="HelpWhy" />
         <input name="Rules[__index__].HelpTrigger" value="" data-field="HelpTrigger" />
@@ -308,6 +330,9 @@
     const hiddenTemplate = document.getElementById('hidden-rule-template');
     const modalIndex = document.getElementById('modal-rule-index');
     const fields = [...document.querySelectorAll('[data-modal-field]')];
+    const markdownField = document.getElementById('modal-HelpMarkdown');
+    const markdownFile = document.getElementById('modal-HelpMarkdownFile');
+    const markdownPreview = document.getElementById('modal-HelpMarkdownPreview');
     let currentStep = 1;
 
     function setStep(step) {
@@ -336,6 +361,7 @@
         modalIndex.value = index;
         const values = index === 'new' ? {} : getRule(index);
         fields.forEach(field => field.value = values[field.dataset.modalField] || field.querySelector?.('option')?.value || '');
+        renderMarkdownPreview();
         modal.classList.add('open');
     }
 
@@ -427,10 +453,102 @@
         }[character]));
     }
 
+    function renderMarkdown(markdown) {
+        const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+        let html = '';
+        let inList = false;
+        let inCode = false;
+
+        for (const rawLine of lines) {
+            const line = rawLine.trimEnd();
+            if (line.startsWith('```')) {
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+                html += inCode ? '</code></pre>' : '<pre><code>';
+                inCode = !inCode;
+                continue;
+            }
+
+            if (inCode) {
+                html += `${escapeHtml(line)}\n`;
+                continue;
+            }
+
+            if (!line.trim()) {
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+                continue;
+            }
+
+            if (line.startsWith('# ')) {
+                html += `<h1>${renderInlineMarkdown(line.slice(2))}</h1>`;
+                continue;
+            }
+
+            if (line.startsWith('## ')) {
+                html += `<h2>${renderInlineMarkdown(line.slice(3))}</h2>`;
+                continue;
+            }
+
+            if (line.startsWith('### ')) {
+                html += `<h3>${renderInlineMarkdown(line.slice(4))}</h3>`;
+                continue;
+            }
+
+            if (line.startsWith('- ')) {
+                if (!inList) {
+                    html += '<ul>';
+                    inList = true;
+                }
+                html += `<li>${renderInlineMarkdown(line.slice(2))}</li>`;
+                continue;
+            }
+
+            if (inList) {
+                html += '</ul>';
+                inList = false;
+            }
+            html += `<p>${renderInlineMarkdown(line)}</p>`;
+        }
+
+        if (inList) {
+            html += '</ul>';
+        }
+        if (inCode) {
+            html += '</code></pre>';
+        }
+        return html;
+    }
+
+    function renderInlineMarkdown(value) {
+        return escapeHtml(value)
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>');
+    }
+
+    function renderMarkdownPreview() {
+        markdownPreview.innerHTML = renderMarkdown(markdownField.value || 'Preview will appear here.');
+    }
+
     document.getElementById('add-rule')?.addEventListener('click', () => openRuleModal('new'));
     document.getElementById('save-rule-modal')?.addEventListener('click', saveRule);
     document.getElementById('cancel-rule-modal')?.addEventListener('click', closeRuleModal);
     document.getElementById('close-rule-modal')?.addEventListener('click', closeRuleModal);
+    markdownField?.addEventListener('input', renderMarkdownPreview);
+    markdownFile?.addEventListener('change', async () => {
+        const file = markdownFile.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        markdownField.value = await file.text();
+        renderMarkdownPreview();
+    });
     next?.addEventListener('click', () => setStep(currentStep + 1));
     back?.addEventListener('click', () => setStep(currentStep - 1));
     document.getElementById('profile-version-form')?.addEventListener('input', updateReview);

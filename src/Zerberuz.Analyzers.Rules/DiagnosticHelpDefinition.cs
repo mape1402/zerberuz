@@ -8,6 +8,8 @@ public sealed class DiagnosticHelpDefinition
 
     public string Summary { get; set; } = string.Empty;
 
+    public string Markdown { get; set; } = string.Empty;
+
     public string Why { get; set; } = string.Empty;
 
     public string Trigger { get; set; } = string.Empty;

@@ -602,6 +602,13 @@ public sealed class CliApplication
     private static void WriteHelp(DiagnosticHelpDefinition help, TextWriter output)
     {
         output.WriteLine($"{help.DiagnosticId}: {help.Title}");
+        if (!string.IsNullOrWhiteSpace(help.Markdown))
+        {
+            output.WriteLine();
+            output.WriteLine(help.Markdown);
+            return;
+        }
+
         WriteSection(output, "Summary", help.Summary);
         WriteSection(output, "Why", help.Why);
         WriteSection(output, "Trigger", help.Trigger);
@@ -651,6 +658,11 @@ public sealed class CliApplication
 
     private static string RenderHelpMarkdown(DiagnosticHelpDefinition help)
     {
+        if (!string.IsNullOrWhiteSpace(help.Markdown))
+        {
+            return help.Markdown;
+        }
+
         using var writer = new StringWriter();
         writer.WriteLine($"# {help.DiagnosticId}: {help.Title}");
         WriteMarkdownSection(writer, "Summary", help.Summary);

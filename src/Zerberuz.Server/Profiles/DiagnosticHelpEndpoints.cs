@@ -16,7 +16,8 @@ public static class DiagnosticHelpEndpoints
                 ? Results.NotFound()
                 : Results.Ok(new DiagnosticHelpResponse
                 {
-                    Help = help
+                    Help = help,
+                    HelpHtml = MarkdownHelpRenderer.Render(help)
                 });
         });
 
@@ -37,7 +38,8 @@ public static class DiagnosticHelpEndpoints
                 {
                     Profile = profile,
                     RulesVersion = version,
-                    Help = help
+                    Help = help,
+                    HelpHtml = MarkdownHelpRenderer.Render(help)
                 });
         });
 

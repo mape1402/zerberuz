@@ -24,6 +24,8 @@ public sealed class DiagnosticHelpEndpointTests : IClassFixture<WebApplicationFa
         Assert.NotNull(response);
         Assert.Equal("ZBZ001", response.Help.DiagnosticId);
         Assert.Contains("Interface", response.Help.Title);
+        Assert.Contains("<h1>", response.HelpHtml);
+        Assert.Contains("<h2>Summary</h2>", response.HelpHtml);
     }
 
     [Fact]
@@ -38,6 +40,7 @@ public sealed class DiagnosticHelpEndpointTests : IClassFixture<WebApplicationFa
         Assert.Equal("backend", response.Profile);
         Assert.Equal("2026.08.11", response.RulesVersion);
         Assert.Equal("ZBZ100", response.Help.DiagnosticId);
+        Assert.Contains("<h1>", response.HelpHtml);
     }
 
     [Fact]

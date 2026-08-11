@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <ProjectReference Include="..\..\src\Zerberuz.Analyzers.Core\Zerberuz.Analyzers.Core.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <ProjectReference Include="..\..\src\Zerberuz.Analyzers\Zerberuz.Analyzers.csproj" />
   </ItemGroup>
 </Project>

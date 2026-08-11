@@ -1,1 +1,4 @@
-Console.WriteLine("Zerberuz benchmark shell");
+using BenchmarkDotNet.Running;
+using Zerberuz.Benchmarks;
+
+BenchmarkRunner.Run<AnalyzerExecutionBenchmark>();

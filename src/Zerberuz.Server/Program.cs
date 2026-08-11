@@ -8,6 +8,7 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Zerberuz Server shell");
 app.MapRuleProfileEndpoints();
+app.MapDiagnosticHelpEndpoints();
 
 app.Run();
 

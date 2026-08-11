@@ -127,6 +127,24 @@ dotnet run --project src/Zerberuz.Cli -- explain ZBZ001 --offline --config-path 
 
 The demo cache is shared at `.zerberuz/cache` for local development. Teams can point `cacheRoot` or `ZERBERUZ_CACHE_ROOT` to a common machine/team location to avoid downloading the same rules per project.
 
+## Server Persistence
+
+`Zerberuz.Server` uses EF Core with SQLite by default. On startup, it creates the local database if needed and seeds the initial `backend` profile.
+
+Default database path:
+
+```text
+<server-bin>/zerberuz.db
+```
+
+Override the database with the `ConnectionStrings:Zerberuz` connection string:
+
+```bash
+dotnet run --project src/Zerberuz.Server --ConnectionStrings:Zerberuz "Data Source=C:/elysium/zerberuz-data/zerberuz.db"
+```
+
+The HTTP endpoints still read through `IProfileRuleStore`, so the API surface stays stable while the persistence provider evolves.
+
 ## Rule Configuration
 
 Example rule cache payload:

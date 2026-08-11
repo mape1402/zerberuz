@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Zerberuz.Analyzers.Rules;
 using Zerberuz.Server.Contracts;
@@ -7,6 +9,7 @@ namespace Zerberuz.Server.Tests;
 
 public sealed class RuleValidationEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly WebApplicationFactory<Program> factory;
 
     public RuleValidationEndpointTests(WebApplicationFactory<Program> factory)
@@ -19,8 +22,8 @@ public sealed class RuleValidationEndpointTests : IClassFixture<WebApplicationFa
     {
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/rules/validate", CreateValidRuleSet());
-        var validation = await response.Content.ReadFromJsonAsync<RuleValidationResponse>();
+        var response = await client.PostAsJsonAsync("/api/v1/rules/validate", CreateValidRuleSet(), JsonOptions);
+        var validation = await response.Content.ReadFromJsonAsync<RuleValidationResponse>(JsonOptions);
 
         Assert.NotNull(validation);
         Assert.True(validation.IsValid);
@@ -34,8 +37,8 @@ public sealed class RuleValidationEndpointTests : IClassFixture<WebApplicationFa
         var ruleSet = CreateValidRuleSet();
         ruleSet.Rules[0].Condition.MustMatch = "[";
 
-        var response = await client.PostAsJsonAsync("/api/v1/rules/validate", ruleSet);
-        var validation = await response.Content.ReadFromJsonAsync<RuleValidationResponse>();
+        var response = await client.PostAsJsonAsync("/api/v1/rules/validate", ruleSet, JsonOptions);
+        var validation = await response.Content.ReadFromJsonAsync<RuleValidationResponse>(JsonOptions);
 
         Assert.NotNull(validation);
         Assert.False(validation.IsValid);
@@ -76,5 +79,12 @@ public sealed class RuleValidationEndpointTests : IClassFixture<WebApplicationFa
                 }
             }
         };
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        return options;
     }
 }

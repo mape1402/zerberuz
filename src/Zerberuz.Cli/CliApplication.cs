@@ -34,7 +34,8 @@ public sealed class CliApplication
         TextWriter error,
         Func<string, bool> fileExists,
         Func<string, string> readAllText,
-        Action<string, string>? writeAllText = null)
+        Action<string, string>? writeAllText = null,
+        Func<string, string>? readSource = null)
     {
         if (args.Length == 0)
         {
@@ -45,7 +46,7 @@ public sealed class CliApplication
         return args[0] switch
         {
             "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
-            "sync-rules" => SyncRules(args.Skip(1).ToArray(), output, error),
+            "sync-rules" => SyncRules(args.Skip(1).ToArray(), output, error, readSource ?? ReadSource),
             "doctor" => Doctor(args.Skip(1).ToArray(), output, error),
             "explain" => Explain(args.Skip(1).ToArray(), output, error, fileExists, readAllText),
             "--help" or "-h" => WriteUsageAndReturn(output),
@@ -85,7 +86,11 @@ public sealed class CliApplication
         return 0;
     }
 
-    private static int SyncRules(string[] args, TextWriter output, TextWriter error)
+    private static int SyncRules(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<string, string> readSource)
     {
         var source = ResolveSyncSource(args);
         if (string.IsNullOrWhiteSpace(source))
@@ -104,7 +109,7 @@ public sealed class CliApplication
         }
 
         var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
-        var payload = ReadSource(source);
+        var payload = readSource(source);
         var ruleSet = ReadRuleSetPayload(payload);
         var validation = new RuleSetValidator().Validate(ruleSet);
         if (!validation.IsValid)

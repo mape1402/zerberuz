@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Zerberuz.Server.Contracts;
 
@@ -7,6 +9,7 @@ namespace Zerberuz.Server.Tests;
 
 public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly WebApplicationFactory<Program> factory;
 
     public RuleProfileEndpointTests(WebApplicationFactory<Program> factory)
@@ -19,7 +22,9 @@ public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFacto
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<ProfileVersionsResponse>("/api/v1/profiles/backend/versions");
+        var response = await client.GetFromJsonAsync<ProfileVersionsResponse>(
+            "/api/v1/profiles/backend/versions",
+            JsonOptions);
 
         Assert.NotNull(response);
         Assert.Equal("backend", response.Profile);
@@ -32,7 +37,8 @@ public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFacto
         var client = factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<RuleProfileResponse>(
-            "/api/v1/profiles/backend/versions/2026.08.11");
+            "/api/v1/profiles/backend/versions/2026.08.11",
+            JsonOptions);
 
         Assert.NotNull(response);
         Assert.Equal("backend", response.Profile);
@@ -47,7 +53,8 @@ public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFacto
         var client = factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<RuleProfileResponse>(
-            "/api/v1/profiles/backend/latest-compatible?engineVersion=1.0.0");
+            "/api/v1/profiles/backend/latest-compatible?engineVersion=1.0.0",
+            JsonOptions);
 
         Assert.NotNull(response);
         Assert.Equal("2026.08.11", response.RulesVersion);
@@ -61,5 +68,12 @@ public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFacto
         var response = await client.GetAsync("/api/v1/profiles/missing/versions");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        return options;
     }
 }

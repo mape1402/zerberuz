@@ -43,7 +43,7 @@ public sealed class VersionModel : PageModel
         AddIfPresent(parts, "namespace contains", rule.Condition.NamespaceMustContain);
 
         return parts.Count == 0
-            ? "Sin condicion declarada"
+            ? "No condition declared"
             : string.Join(" | ", parts);
     }
 
@@ -51,7 +51,7 @@ public sealed class VersionModel : PageModel
     {
         return RuleSet?.Help.FirstOrDefault(help =>
                 string.Equals(help.DiagnosticId, diagnosticId, StringComparison.Ordinal))?.Title
-            ?? "Sin ayuda asociada";
+            ?? "No help content linked";
     }
 
     private static void AddIfPresent(ICollection<string> parts, string label, string? value)

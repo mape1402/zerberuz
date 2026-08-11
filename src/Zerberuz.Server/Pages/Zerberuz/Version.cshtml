@@ -13,12 +13,12 @@ else
 {
     <div class="page-heading">
         <div>
-            <p class="eyebrow">Version de perfil</p>
+            <p class="eyebrow">Profile Version</p>
             <h1>@Model.RuleSet.Profile</h1>
-            <p class="lead">Esta version contiene las reglas que descargan los analyzers para este perfil. Para cambiar algo, publica una nueva version.</p>
+            <p class="lead">This version contains the rules downloaded by analyzers for this profile. Publish a new version to change rules.</p>
         </div>
         <div class="toolbar">
-            <a class="button secondary" href="/zerberuz">Volver</a>
+            <a class="button secondary" href="/zerberuz">Back</a>
             <a class="button" href="/api/v1/profiles/@Uri.EscapeDataString(Model.RuleSet.Profile)/versions/@Uri.EscapeDataString(Model.RuleSet.RulesVersion)">API JSON</a>
         </div>
     </div>
@@ -26,11 +26,11 @@ else
     <section class="stats">
         <div class="stat">
             <strong>@Model.RuleSet.Rules.Count</strong>
-            <span>Reglas</span>
+            <span>Rules</span>
         </div>
         <div class="stat">
             <strong>@Model.RuleSet.Help.Count</strong>
-            <span>Ayudas</span>
+            <span>Help topics</span>
         </div>
         <div class="stat">
             <strong>@Model.RuleSet.RulesVersion</strong>
@@ -40,7 +40,7 @@ else
 
     <section class="panel">
         <div class="panel-header">
-            <strong>Resumen tecnico</strong>
+            <strong>Technical Summary</strong>
             <span class="muted">Minimum engine: @Model.RuleSet.MinimumEngineVersion</span>
         </div>
         <table>
@@ -75,26 +75,26 @@ else
 
                 <div class="rule-meta">
                     <div class="meta-box">
-                        <span>Tipo</span>
+                        <span>Type</span>
                         <strong>@rule.Type</strong>
                     </div>
                     <div class="meta-box">
-                        <span>Objetivo</span>
+                        <span>Target</span>
                         <code>@Model.GetTargetSummary(rule)</code>
                     </div>
                     <div class="meta-box">
-                        <span>Condicion</span>
+                        <span>Condition</span>
                         <code>@Model.GetConditionSummary(rule)</code>
                     </div>
                 </div>
 
                 <div class="rule-meta">
                     <div class="meta-box">
-                        <span>Mensaje</span>
+                        <span>Message</span>
                         <strong>@rule.Message</strong>
                     </div>
                     <div class="meta-box">
-                        <span>Ayuda</span>
+                        <span>Help</span>
                         <strong>@Model.GetHelpTitle(rule.Id)</strong>
                     </div>
                     <div class="meta-box">

@@ -7,49 +7,49 @@
 <div class="page-heading">
     <div>
         <p class="eyebrow">Zerberuz Server</p>
-        <h1>Perfiles de reglas</h1>
-        <p class="lead">Un perfil agrupa reglas por contexto, por ejemplo backend, frontend o contracts. Cada cambio se publica como una nueva version inmutable.</p>
+        <h1>Rule Profiles</h1>
+        <p class="lead">A profile groups analyzer rules for a context such as backend, frontend, or contracts. Every change is published as an immutable version.</p>
     </div>
-    <a class="button warn" href="/zerberuz/publish">Crear perfil o version</a>
+    <a class="button warn" href="/zerberuz/publish">Create Profile Version</a>
 </div>
 
 <section class="workflow">
     <div class="workflow-card">
-        <strong>1. Nombra el perfil</strong>
-        <span>El campo JSON <code>profile</code> crea el perfil si no existe.</span>
+        <strong>1. Name the profile</strong>
+        <span>The profile name creates a new profile when it does not exist.</span>
     </div>
     <div class="workflow-card">
-        <strong>2. Define reglas y ayuda</strong>
-        <span>Cada regla requiere su <code>id</code>, condicion y ayuda del diagnostico.</span>
+        <strong>2. Configure rules</strong>
+        <span>Each rule has a diagnostic id, target, condition, message, and help content.</span>
     </div>
     <div class="workflow-card">
-        <strong>3. Publica una version</strong>
-        <span><code>rulesVersion</code> debe ser nuevo; las versiones anteriores quedan disponibles.</span>
+        <strong>3. Publish a version</strong>
+        <span>The rules version must be new; older versions remain available.</span>
     </div>
 </section>
 
 <section class="stats">
     <div class="stat">
         <strong>@Model.ProfileCount</strong>
-        <span>Perfiles</span>
+        <span>Profiles</span>
     </div>
     <div class="stat">
         <strong>@Model.VersionCount</strong>
-        <span>Versiones publicadas</span>
+        <span>Published versions</span>
     </div>
     <div class="stat">
         <strong>@Model.LatestVersionCount</strong>
-        <span>Perfiles activos</span>
+        <span>Active profiles</span>
     </div>
 </section>
 
 @if (Model.Profiles.Count == 0)
 {
     <div class="empty">
-        <strong>No hay perfiles todavia.</strong>
-        <p class="muted">Crea el primero publicando un ruleset JSON con <code>profile</code>, <code>rulesVersion</code>, <code>rules</code> y <code>help</code>.</p>
+        <strong>No profiles yet.</strong>
+        <p class="muted">Create the first one by publishing a guided profile version.</p>
         <div class="toolbar">
-            <a class="button warn" href="/zerberuz/publish">Crear primer perfil</a>
+            <a class="button warn" href="/zerberuz/publish">Create First Profile</a>
         </div>
     </div>
 }
@@ -57,17 +57,17 @@ else
 {
     <section class="panel">
         <div class="panel-header">
-            <strong>Perfiles publicados</strong>
-            <span class="muted">Abre la version actual para ver regla por regla.</span>
+            <strong>Published Profiles</strong>
+            <span class="muted">Open the current version to inspect each configured rule.</span>
         </div>
         <table>
             <thead>
                 <tr>
-                    <th>Perfil</th>
-                    <th>Version actual</th>
-                    <th>Reglas</th>
-                    <th>Historial</th>
-                    <th>Acciones</th>
+                    <th>Profile</th>
+                    <th>Current version</th>
+                    <th>Rules</th>
+                    <th>History</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -77,12 +77,12 @@ else
                     <tr>
                         <td>
                             <span class="profile-name">@profile.Name</span><br />
-                            <span class="muted">Perfil de analizadores</span>
+                            <span class="muted">Analyzer profile</span>
                         </td>
                         <td>
                             @if (currentVersion is null)
                             {
-                                <span class="muted">Sin versiones</span>
+                                <span class="muted">No versions</span>
                             }
                             else
                             {
@@ -92,12 +92,12 @@ else
                         <td>
                             @if (profile.CurrentRuleSet is null)
                             {
-                                <span class="muted">0 reglas</span>
+                                <span class="muted">0 rules</span>
                             }
                             else
                             {
                                 <strong>@profile.CurrentRuleSet.Rules.Count</strong><br />
-                                <span class="muted">@profile.CurrentRuleSet.Help.Count ayudas</span>
+                                <span class="muted">@profile.CurrentRuleSet.Help.Count help topics</span>
                             }
                         </td>
                         <td>
@@ -112,9 +112,9 @@ else
                             <span class="row-actions">
                                 @if (currentVersion is not null)
                                 {
-                                    <a class="button secondary" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(currentVersion)">Ver reglas</a>
+                                    <a class="button secondary" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(currentVersion)">View Rules</a>
                                 }
-                                <a class="button secondary" href="/zerberuz/publish">Nueva version</a>
+                                <a class="button secondary" href="/zerberuz/publish">New Version</a>
                             </span>
                         </td>
                     </tr>

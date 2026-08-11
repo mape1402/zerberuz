@@ -4,6 +4,9 @@ namespace Zerberuz.Server.Profiles;
 
 public interface IProfileRuleStore
 {
+    Task<IReadOnlyCollection<string>> GetProfilesAsync(
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyCollection<string>> GetVersionsAsync(
         string profile,
         CancellationToken cancellationToken = default);

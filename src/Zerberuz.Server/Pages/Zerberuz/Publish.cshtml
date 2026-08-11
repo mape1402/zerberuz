@@ -1,0 +1,22 @@
+@page "/zerberuz/publish"
+@model PublishModel
+@{
+    ViewData["Title"] = "Publish";
+}
+
+<h1>Publish Rule Profile</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="message @(Model.Succeeded ? "ok" : "error")">@Model.Message</div>
+}
+
+<form method="post">
+    @Html.AntiForgeryToken()
+    <label for="RuleSetJson"><strong>Rule set JSON</strong></label>
+    <textarea id="RuleSetJson" name="RuleSetJson">@Model.RuleSetJson</textarea>
+    <div class="toolbar">
+        <button class="button" type="submit">Publish</button>
+        <a class="button secondary" href="/zerberuz">Cancel</a>
+    </div>
+</form>

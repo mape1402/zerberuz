@@ -27,6 +27,13 @@ public sealed class InMemoryProfileRuleStore : IProfileRuleStore
         }
     }
 
+    public Task<IReadOnlyCollection<string>> GetProfilesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyCollection<string> result = profiles.Keys.OrderBy(profile => profile).ToArray();
+        return Task.FromResult(result);
+    }
+
     public Task<IReadOnlyCollection<string>> GetVersionsAsync(
         string profile,
         CancellationToken cancellationToken = default)

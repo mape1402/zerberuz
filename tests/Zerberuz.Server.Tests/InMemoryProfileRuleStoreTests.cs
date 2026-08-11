@@ -13,6 +13,14 @@ public sealed class InMemoryProfileRuleStoreTests
     }
 
     [Fact]
+    public async Task GetProfiles_returns_seeded_backend_profile()
+    {
+        var profiles = await new InMemoryProfileRuleStore().GetProfilesAsync();
+
+        Assert.Contains("backend", profiles);
+    }
+
+    [Fact]
     public async Task GetRuleSet_returns_seeded_backend_rules()
     {
         var ruleSet = await new InMemoryProfileRuleStore().GetRuleSetAsync("backend", "2026.08.11");

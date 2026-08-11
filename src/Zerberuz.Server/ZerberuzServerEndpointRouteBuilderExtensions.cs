@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Builder;
 using Zerberuz.Server.Profiles;
 
 namespace Zerberuz.Server;
@@ -10,6 +11,7 @@ public static class ZerberuzServerEndpointRouteBuilderExtensions
         endpoints.MapRuleProfileEndpoints();
         endpoints.MapDiagnosticHelpEndpoints();
         endpoints.MapRuleValidationEndpoints();
+        endpoints.MapRazorPages();
         return endpoints;
     }
 }

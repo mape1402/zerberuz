@@ -1,0 +1,41 @@
+@page "/zerberuz"
+@model IndexModel
+@{
+    ViewData["Title"] = "Profiles";
+}
+
+<h1>Rule Profiles</h1>
+
+<div class="toolbar">
+    <a class="button" href="/zerberuz/publish">Publish rule profile</a>
+</div>
+
+@if (Model.Profiles.Count == 0)
+{
+    <p class="muted">No rule profiles have been published yet.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Profile</th>
+                <th>Versions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var profile in Model.Profiles)
+            {
+                <tr>
+                    <td><strong>@profile.Name</strong></td>
+                    <td>
+                        @foreach (var version in profile.Versions)
+                        {
+                            <a href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(version)">@version</a><br />
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

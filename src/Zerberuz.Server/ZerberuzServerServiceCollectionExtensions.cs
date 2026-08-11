@@ -37,6 +37,9 @@ public static class ZerberuzServerServiceCollectionExtensions
 
         services.AddScoped<IProfileRuleStore, EfProfileRuleStore>();
         services.AddSingleton<RuleProfileResponseFactory>();
+        services.AddRazorPages()
+            .AddApplicationPart(typeof(ZerberuzServerServiceCollectionExtensions).Assembly);
+
         return services;
     }
 }

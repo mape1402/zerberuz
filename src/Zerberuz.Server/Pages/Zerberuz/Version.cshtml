@@ -1,0 +1,64 @@
+@page "/zerberuz/profiles/{profile}/versions/{version}"
+@model VersionModel
+@{
+    ViewData["Title"] = "Rule Profile";
+}
+
+@if (Model.RuleSet is null)
+{
+    <h1>Rule profile not found</h1>
+    <p class="muted">The requested profile version does not exist.</p>
+}
+else
+{
+    <h1>@Model.RuleSet.Profile @Model.RuleSet.RulesVersion</h1>
+
+    <div class="toolbar">
+        <a class="button secondary" href="/zerberuz">Back to profiles</a>
+        <a class="button secondary" href="/api/v1/profiles/@Uri.EscapeDataString(Model.RuleSet.Profile)/versions/@Uri.EscapeDataString(Model.RuleSet.RulesVersion)">Open API response</a>
+    </div>
+
+    <table>
+        <tbody>
+            <tr>
+                <th>Schema</th>
+                <td>@Model.RuleSet.SchemaVersion</td>
+            </tr>
+            <tr>
+                <th>Minimum engine</th>
+                <td>@Model.RuleSet.MinimumEngineVersion</td>
+            </tr>
+            <tr>
+                <th>Rules</th>
+                <td>@Model.RuleSet.Rules.Count</td>
+            </tr>
+            <tr>
+                <th>Help topics</th>
+                <td>@Model.RuleSet.Help.Count</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Rules</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Severity</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rule in Model.RuleSet.Rules)
+            {
+                <tr>
+                    <td><code>@rule.Id</code></td>
+                    <td>@rule.Title</td>
+                    <td>@rule.Type</td>
+                    <td>@rule.Severity</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

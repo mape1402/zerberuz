@@ -13,6 +13,18 @@ public sealed class EfProfileRuleStore : IProfileRuleStore
         this.dbContext = dbContext;
     }
 
+    public async Task<IReadOnlyCollection<string>> GetProfilesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.RuleProfiles
+            .AsNoTracking()
+            .Select(candidate => candidate.Profile)
+            .Distinct()
+            .OrderBy(profile => profile)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyCollection<string>> GetVersionsAsync(
         string profile,
         CancellationToken cancellationToken = default)

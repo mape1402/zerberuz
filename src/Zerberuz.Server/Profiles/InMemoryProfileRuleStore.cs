@@ -27,33 +27,51 @@ public sealed class InMemoryProfileRuleStore : IProfileRuleStore
         }
     }
 
-    public IReadOnlyCollection<string> GetVersions(string profile)
+    public Task<IReadOnlyCollection<string>> GetVersionsAsync(
+        string profile,
+        CancellationToken cancellationToken = default)
     {
-        return profiles.TryGetValue(profile, out var versions)
+        IReadOnlyCollection<string> result = profiles.TryGetValue(profile, out var versions)
             ? versions.Keys.Reverse().ToArray()
             : Array.Empty<string>();
+
+        return Task.FromResult(result);
     }
 
-    public RuleSetDefinition? GetRuleSet(string profile, string version)
+    public Task<RuleSetDefinition?> GetRuleSetAsync(
+        string profile,
+        string version,
+        CancellationToken cancellationToken = default)
     {
-        return profiles.TryGetValue(profile, out var versions) &&
+        var result = profiles.TryGetValue(profile, out var versions) &&
             versions.TryGetValue(version, out var ruleSet)
                 ? ruleSet
                 : null;
+
+        return Task.FromResult(result);
     }
 
-    public RuleSetDefinition? GetLatestCompatibleRuleSet(string profile, string engineVersion)
+    public Task<RuleSetDefinition?> GetLatestCompatibleRuleSetAsync(
+        string profile,
+        string engineVersion,
+        CancellationToken cancellationToken = default)
     {
-        return profiles.TryGetValue(profile, out var versions)
+        var result = profiles.TryGetValue(profile, out var versions)
             ? versions.Values.LastOrDefault()
             : null;
+
+        return Task.FromResult(result);
     }
 
-    public DiagnosticHelpDefinition? FindHelp(string diagnosticId)
+    public Task<DiagnosticHelpDefinition?> FindHelpAsync(
+        string diagnosticId,
+        CancellationToken cancellationToken = default)
     {
-        return profiles.Values
+        var result = profiles.Values
             .SelectMany(versions => versions.Values)
             .SelectMany(ruleSet => ruleSet.Help)
             .FirstOrDefault(help => string.Equals(help.DiagnosticId, diagnosticId, StringComparison.Ordinal));
+
+        return Task.FromResult(result);
     }
 }

@@ -4,11 +4,21 @@ namespace Zerberuz.Server.Profiles;
 
 public interface IProfileRuleStore
 {
-    IReadOnlyCollection<string> GetVersions(string profile);
+    Task<IReadOnlyCollection<string>> GetVersionsAsync(
+        string profile,
+        CancellationToken cancellationToken = default);
 
-    RuleSetDefinition? GetRuleSet(string profile, string version);
+    Task<RuleSetDefinition?> GetRuleSetAsync(
+        string profile,
+        string version,
+        CancellationToken cancellationToken = default);
 
-    RuleSetDefinition? GetLatestCompatibleRuleSet(string profile, string engineVersion);
+    Task<RuleSetDefinition?> GetLatestCompatibleRuleSetAsync(
+        string profile,
+        string engineVersion,
+        CancellationToken cancellationToken = default);
 
-    DiagnosticHelpDefinition? FindHelp(string diagnosticId);
+    Task<DiagnosticHelpDefinition?> FindHelpAsync(
+        string diagnosticId,
+        CancellationToken cancellationToken = default);
 }

@@ -6,9 +6,12 @@ public static class RuleProfileEndpoints
 {
     public static IEndpointRouteBuilder MapRuleProfileEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/api/v1/profiles/{profile}/versions", (string profile, IProfileRuleStore store) =>
+        endpoints.MapGet("/api/v1/profiles/{profile}/versions", async (
+            string profile,
+            IProfileRuleStore store,
+            CancellationToken cancellationToken) =>
         {
-            var versions = store.GetVersions(profile);
+            var versions = await store.GetVersionsAsync(profile, cancellationToken).ConfigureAwait(false);
             return versions.Count == 0
                 ? Results.NotFound()
                 : Results.Ok(new ProfileVersionsResponse
@@ -18,25 +21,32 @@ public static class RuleProfileEndpoints
                 });
         });
 
-        endpoints.MapGet("/api/v1/profiles/{profile}/versions/{version}", (
+        endpoints.MapGet("/api/v1/profiles/{profile}/versions/{version}", async (
             string profile,
             string version,
             IProfileRuleStore store,
-            RuleProfileResponseFactory factory) =>
+            RuleProfileResponseFactory factory,
+            CancellationToken cancellationToken) =>
         {
-            var ruleSet = store.GetRuleSet(profile, version);
+            var ruleSet = await store.GetRuleSetAsync(profile, version, cancellationToken).ConfigureAwait(false);
             return ruleSet is null
                 ? Results.NotFound()
                 : Results.Ok(factory.Create(ruleSet));
         });
 
-        endpoints.MapGet("/api/v1/profiles/{profile}/latest-compatible", (
+        endpoints.MapGet("/api/v1/profiles/{profile}/latest-compatible", async (
             string profile,
             string? engineVersion,
             IProfileRuleStore store,
-            RuleProfileResponseFactory factory) =>
+            RuleProfileResponseFactory factory,
+            CancellationToken cancellationToken) =>
         {
-            var ruleSet = store.GetLatestCompatibleRuleSet(profile, engineVersion ?? "1.0.0");
+            var ruleSet = await store.GetLatestCompatibleRuleSetAsync(
+                    profile,
+                    engineVersion ?? "1.0.0",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             return ruleSet is null
                 ? Results.NotFound()
                 : Results.Ok(factory.Create(ruleSet));

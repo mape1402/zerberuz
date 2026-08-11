@@ -5,17 +5,17 @@ namespace Zerberuz.Server.Tests;
 public sealed class InMemoryProfileRuleStoreTests
 {
     [Fact]
-    public void GetVersions_returns_seeded_backend_version()
+    public async Task GetVersions_returns_seeded_backend_version()
     {
-        var versions = new InMemoryProfileRuleStore().GetVersions("backend");
+        var versions = await new InMemoryProfileRuleStore().GetVersionsAsync("backend");
 
         Assert.Contains("2026.08.11", versions);
     }
 
     [Fact]
-    public void GetRuleSet_returns_seeded_backend_rules()
+    public async Task GetRuleSet_returns_seeded_backend_rules()
     {
-        var ruleSet = new InMemoryProfileRuleStore().GetRuleSet("backend", "2026.08.11");
+        var ruleSet = await new InMemoryProfileRuleStore().GetRuleSetAsync("backend", "2026.08.11");
 
         Assert.NotNull(ruleSet);
         Assert.Contains(ruleSet.Rules, rule => rule.Id == "ZBZ001");
@@ -23,9 +23,9 @@ public sealed class InMemoryProfileRuleStoreTests
     }
 
     [Fact]
-    public void FindHelp_returns_seeded_diagnostic_help()
+    public async Task FindHelp_returns_seeded_diagnostic_help()
     {
-        var help = new InMemoryProfileRuleStore().FindHelp("ZBZ001");
+        var help = await new InMemoryProfileRuleStore().FindHelpAsync("ZBZ001");
 
         Assert.NotNull(help);
         Assert.Equal("Interfaces must start with I", help.Title);

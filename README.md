@@ -91,6 +91,42 @@ zerberuz explain ZBZ001 --offline
 zerberuz doctor
 ```
 
+## Local End-to-End Demo
+
+Run these commands from the repository root to exercise the full local loop: server, CLI sync, shared cache, analyzer diagnostics, and offline help.
+
+Start the rule server:
+
+```bash
+dotnet run --project src/Zerberuz.Server -- --urls http://localhost:5000
+```
+
+In another terminal, sync the seeded `backend` profile into the shared demo cache:
+
+```bash
+dotnet run --project src/Zerberuz.Cli -- sync-rules --server http://localhost:5000 --profile backend --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+```
+
+Validate the shared cache:
+
+```bash
+dotnet run --project src/Zerberuz.Cli -- doctor --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+```
+
+Build the sample and observe configured diagnostics:
+
+```bash
+dotnet build samples/Zerberuz.Samples.Basic/Zerberuz.Samples.Basic.csproj
+```
+
+Explain a diagnostic from the offline help cached by `sync-rules`:
+
+```bash
+dotnet run --project src/Zerberuz.Cli -- explain ZBZ001 --offline --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+```
+
+The demo cache is shared at `.zerberuz/cache` for local development. Teams can point `cacheRoot` or `ZERBERUZ_CACHE_ROOT` to a common machine/team location to avoid downloading the same rules per project.
+
 ## Rule Configuration
 
 Example rule cache payload:

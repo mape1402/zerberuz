@@ -145,6 +145,65 @@ dotnet run --project src/Zerberuz.Server --ConnectionStrings:Zerberuz "Data Sour
 
 The HTTP endpoints still read through `IProfileRuleStore`, so the API surface stays stable while the persistence provider evolves.
 
+## Host Zerberuz.Server
+
+`Zerberuz.Server` is designed to be consumed as a hostable NuGet package. Your ASP.NET Core app owns hosting, authentication, authorization, observability, deployment, and database configuration.
+
+Install:
+
+```bash
+dotnet add package Zerberuz.Server
+```
+
+Minimal host:
+
+```csharp
+using Zerberuz.Server;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddZerberuzServer(options =>
+{
+    options.UseSqlite(builder.Configuration.GetConnectionString("Zerberuz")!);
+});
+
+var app = builder.Build();
+await app.Services.InitializeZerberuzServerAsync();
+
+app.MapZerberuzServer();
+app.Run();
+```
+
+Disable demo seed data:
+
+```csharp
+builder.Services.AddZerberuzServer(options =>
+{
+    options.SeedDefaultProfiles = false;
+    options.UseSqlite("Data Source=zerberuz.db");
+});
+```
+
+Use a custom EF provider:
+
+```csharp
+builder.Services.AddZerberuzServer(options =>
+{
+    options.UseDbContext(db => db.UseSqlite("Data Source=zerberuz.db"));
+});
+```
+
+The package maps the same endpoints used by the local demo:
+
+```text
+GET  /api/v1/profiles/{profile}/versions
+GET  /api/v1/profiles/{profile}/versions/{version}
+GET  /api/v1/profiles/{profile}/latest-compatible
+GET  /api/v1/diagnostics/{diagnosticId}
+GET  /api/v1/profiles/{profile}/versions/{version}/diagnostics/{diagnosticId}/help
+POST /api/v1/rules/validate
+```
+
 ## Rule Configuration
 
 Example rule cache payload:

@@ -7,4 +7,8 @@
     <Description>Shared contracts for Zerberuz rule payloads, profile versions, and diagnostic help content.</Description>
     <PackageTags>zerberuz;contracts;diagnostics;rules;roslyn;analyzers</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zerberuz.Analyzers.Rules\Zerberuz.Analyzers.Rules.csproj" />
+  </ItemGroup>
 </Project>

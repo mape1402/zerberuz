@@ -76,4 +76,38 @@ public sealed class EfProfileRuleStore : IProfileRuleStore
             .SelectMany(ruleSet => ruleSet!.Help)
             .FirstOrDefault(help => string.Equals(help.DiagnosticId, diagnosticId, StringComparison.Ordinal));
     }
+
+    public async Task<RuleProfilePublishResult> PublishRuleSetAsync(
+        RuleSetDefinition ruleSet,
+        CancellationToken cancellationToken = default)
+    {
+        var exists = await dbContext.RuleProfiles
+            .AnyAsync(
+                candidate => candidate.Profile == ruleSet.Profile &&
+                    candidate.RulesVersion == ruleSet.RulesVersion,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (exists)
+        {
+            return RuleProfilePublishResult.Conflict(
+                "ZBZP001",
+                $"Rule profile '{ruleSet.Profile}@{ruleSet.RulesVersion}' already exists.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        dbContext.RuleProfiles.Add(new RuleProfileEntity
+        {
+            Profile = ruleSet.Profile,
+            RulesVersion = ruleSet.RulesVersion,
+            SchemaVersion = ruleSet.SchemaVersion,
+            MinimumEngineVersion = ruleSet.MinimumEngineVersion,
+            RuleSetJson = RuleSetJsonSerializer.Serialize(ruleSet),
+            CreatedAtUtc = now,
+            PublishedAtUtc = now
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return RuleProfilePublishResult.Success(ruleSet);
+    }
 }

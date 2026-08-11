@@ -74,4 +74,25 @@ public sealed class InMemoryProfileRuleStore : IProfileRuleStore
 
         return Task.FromResult(result);
     }
+
+    public Task<RuleProfilePublishResult> PublishRuleSetAsync(
+        RuleSetDefinition ruleSet,
+        CancellationToken cancellationToken = default)
+    {
+        if (!profiles.TryGetValue(ruleSet.Profile, out var versions))
+        {
+            versions = new SortedDictionary<string, RuleSetDefinition>(StringComparer.OrdinalIgnoreCase);
+            profiles[ruleSet.Profile] = versions;
+        }
+
+        if (versions.ContainsKey(ruleSet.RulesVersion))
+        {
+            return Task.FromResult(RuleProfilePublishResult.Conflict(
+                "ZBZP001",
+                $"Rule profile '{ruleSet.Profile}@{ruleSet.RulesVersion}' already exists."));
+        }
+
+        versions[ruleSet.RulesVersion] = ruleSet;
+        return Task.FromResult(RuleProfilePublishResult.Success(ruleSet));
+    }
 }

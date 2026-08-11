@@ -21,4 +21,8 @@ public interface IProfileRuleStore
     Task<DiagnosticHelpDefinition?> FindHelpAsync(
         string diagnosticId,
         CancellationToken cancellationToken = default);
+
+    Task<RuleProfilePublishResult> PublishRuleSetAsync(
+        RuleSetDefinition ruleSet,
+        CancellationToken cancellationToken = default);
 }

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Zerberuz.Analyzers.Rules;
 using Zerberuz.Server.Contracts;
 
 namespace Zerberuz.Server.Tests;
@@ -70,10 +71,105 @@ public sealed class RuleProfileEndpointTests : IClassFixture<WebApplicationFacto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Publish_version_persists_rule_profile()
+    {
+        var client = factory.CreateClient();
+        var ruleSet = CreateRuleSet("published-" + Guid.NewGuid().ToString("N"), "2026.09.01");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/profiles/{ruleSet.Profile}/versions",
+            ruleSet,
+            JsonOptions);
+        var published = await response.Content.ReadFromJsonAsync<RuleProfileResponse>(JsonOptions);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(published);
+        Assert.Equal(ruleSet.Profile, published.Profile);
+        Assert.Equal("2026.09.01", published.RulesVersion);
+
+        var fetched = await client.GetFromJsonAsync<RuleProfileResponse>(
+            $"/api/v1/profiles/{ruleSet.Profile}/versions/2026.09.01",
+            JsonOptions);
+
+        Assert.NotNull(fetched);
+        Assert.Equal(ruleSet.Profile, fetched.Profile);
+    }
+
+    [Fact]
+    public async Task Publish_version_returns_conflict_for_duplicate_profile_version()
+    {
+        var client = factory.CreateClient();
+        var ruleSet = CreateRuleSet("duplicate-" + Guid.NewGuid().ToString("N"), "2026.09.01");
+
+        var first = await client.PostAsJsonAsync(
+            $"/api/v1/profiles/{ruleSet.Profile}/versions",
+            ruleSet,
+            JsonOptions);
+        var second = await client.PostAsJsonAsync(
+            $"/api/v1/profiles/{ruleSet.Profile}/versions",
+            ruleSet,
+            JsonOptions);
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task Publish_version_rejects_route_profile_mismatch()
+    {
+        var client = factory.CreateClient();
+        var ruleSet = CreateRuleSet("contracts", "2026.09.01");
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/profiles/backend/versions",
+            ruleSet,
+            JsonOptions);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static JsonSerializerOptions CreateJsonOptions()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         return options;
+    }
+
+    private static RuleSetDefinition CreateRuleSet(string profile, string version)
+    {
+        return new RuleSetDefinition
+        {
+            SchemaVersion = "1.0",
+            RulesVersion = version,
+            Profile = profile,
+            Rules =
+            {
+                new RuleDefinition
+                {
+                    Id = "ZBZ001",
+                    Type = ZerberuzRuleType.Naming,
+                    Title = "Interfaces must start with I",
+                    Severity = ZerberuzDiagnosticSeverity.Warning,
+                    Target = new RuleTargetDefinition
+                    {
+                        SymbolKind = ZerberuzSymbolKind.Interface
+                    },
+                    Condition = new RuleConditionDefinition
+                    {
+                        MustStartWith = "I"
+                    },
+                    Message = "Interface '{symbolName}' must start with 'I'."
+                }
+            },
+            Help =
+            {
+                new DiagnosticHelpDefinition
+                {
+                    DiagnosticId = "ZBZ001",
+                    Title = "Interfaces must start with I"
+                }
+            }
+        };
     }
 }

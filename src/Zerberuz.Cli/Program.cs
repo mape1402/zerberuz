@@ -1,1 +1,1 @@
-Console.WriteLine("Zerberuz CLI shell");
+return new Zerberuz.Cli.CliApplication().Run(args);

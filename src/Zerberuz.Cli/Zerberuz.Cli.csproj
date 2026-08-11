@@ -9,6 +9,7 @@
     <Title>Zerberuz.Cli</Title>
     <Description>Command-line tooling for Zerberuz rule sync, cache validation, and diagnostic explanations.</Description>
     <PackageTags>roslyn;analyzers;cli;diagnostics;dotnet-tool;zerberuz</PackageTags>
+    <PackageIcon></PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>

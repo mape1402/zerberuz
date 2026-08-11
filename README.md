@@ -34,7 +34,7 @@ Zerberuz should download declarative rule definitions, not executable analyzer l
 Zerberuz has two integration points:
 
 1. Host `Zerberuz.Server` in an ASP.NET Core app owned by your team.
-2. Install `Zerberuz.Analyzers` in each .NET project and point it at a shared rule cache with `zerberuz.json`.
+2. Install `Zerberuz.Analyzers` in each .NET project and provision one global Zerberuz configuration per machine/team image.
 
 The analyzer never calls the server during Roslyn analysis. The CLI syncs rules from the server into a shared cache, and the analyzer reads that local cache during IDE/build work.
 
@@ -122,6 +122,57 @@ builder.Services.AddZerberuzServer(options =>
 });
 ```
 
+## Configure Zerberuz Tool
+
+Install the CLI as a .NET tool:
+
+```bash
+dotnet tool install --global Zerberuz.Cli
+```
+
+Create the global machine configuration:
+
+```bash
+zerberuz config init --team elysium --profile backend --server http://localhost:5000
+```
+
+Show where the global configuration lives:
+
+```bash
+zerberuz config path
+```
+
+Inspect the current global configuration:
+
+```bash
+zerberuz config show
+```
+
+The global config stores policy identity, not cache paths:
+
+```json
+{
+  "team": "elysium",
+  "profile": "backend",
+  "rulesVersion": "latest-compatible",
+  "mode": "latest-compatible",
+  "rulesEndpoint": "http://localhost:5000"
+}
+```
+
+Pros of global configuration:
+
+- One setup step per machine/team image.
+- Consistent team, profile, rule version, and server endpoint.
+- Less repeated `zerberuz.json` noise in repositories.
+- Easier CI images and developer workstation provisioning.
+
+Cons to manage:
+
+- A machine with stale global config can analyze differently until `doctor` catches it.
+- Multi-team machines need clear provisioning rules.
+- Repositories are less self-describing unless they keep a project-level `zerberuz.json`.
+
 ## Configure A Project
 
 Install the analyzer in the project that should receive diagnostics:
@@ -130,7 +181,7 @@ Install the analyzer in the project that should receive diagnostics:
 dotnet add package Zerberuz.Analyzers
 ```
 
-Add `zerberuz.json` at the project root:
+Most projects do not need a local config file when the global config is provisioned. If a repository must pin a different profile or version, add `zerberuz.json` at the project root:
 
 ```json
 {
@@ -138,8 +189,7 @@ Add `zerberuz.json` at the project root:
   "profile": "backend",
   "rulesVersion": "latest-compatible",
   "mode": "latest-compatible",
-  "rulesEndpoint": "http://localhost:5000",
-  "cacheRoot": "C:/elysium/zerberuz-cache"
+  "rulesEndpoint": "http://localhost:5000"
 }
 ```
 
@@ -159,26 +209,19 @@ The important fields are:
 | `profile` | Rule profile served by Zerberuz Server, such as `backend`. |
 | `rulesVersion` | Exact version like `2026.08.11`, or `latest-compatible`. |
 | `rulesEndpoint` | Zerberuz Server base URL. |
-| `cacheRoot` | Shared cache root used by all projects on the machine/team image. |
 
 ## Sync Rules
-
-Install the CLI when published as a tool:
-
-```bash
-dotnet tool install --global Zerberuz.Cli
-```
 
 Sync rules from your hosted server:
 
 ```bash
-zerberuz sync-rules --server http://localhost:5000 --profile backend --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+zerberuz sync-rules --server http://localhost:5000 --profile backend
 ```
 
-Validate the local/shared cache:
+Validate the global config and locked cache:
 
 ```bash
-zerberuz doctor --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+zerberuz doctor
 ```
 
 Build the project:
@@ -190,35 +233,37 @@ dotnet build
 Explain a diagnostic from the offline help synced into the cache:
 
 ```bash
-zerberuz explain ZBZ001 --offline --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+zerberuz explain ZBZ001 --offline
 ```
 
-## Shared Cache
+## Locked Shared Cache
 
-Use one cache root per team/machine image so every project reuses the same downloaded rules.
+Zerberuz owns the cache path. Projects cannot choose it through `zerberuz.json`, command-line arguments, or environment variables.
 
-Resolution order:
+This is intentional: the cache contains downloaded rule definitions used by the analyzer. Letting projects choose the path would make it easy to point analysis at modified local definitions.
 
-```text
---cache-root
-zerberuz.json: cacheRoot
-ZERBERUZ_CACHE_ROOT
-OS default
-```
-
-OS defaults:
+Default cache roots:
 
 ```text
-Windows: %LOCALAPPDATA%/Zerberuz/cache
-Linux/macOS: ~/.zerberuz/cache
+Windows: %PROGRAMDATA%/Zerberuz/cache
+Linux/macOS with common app data: <common-app-data>/Zerberuz/cache
+Fallback: ~/.zerberuz/cache
 ```
 
 Layout:
 
 ```text
-<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/rules-cache.json
-<cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/help/ZBZ001.md
-<cacheRoot>/teams/<team>/profiles/<profile>/latest-compatible.json
+<Zerberuz cache>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/rules-cache.json
+<Zerberuz cache>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/help/ZBZ001.md
+<Zerberuz cache>/teams/<team>/profiles/<profile>/latest-compatible.json
+```
+
+Configuration resolution:
+
+```text
+project zerberuz.json, when present
+global Zerberuz config
+built-in defaults
 ```
 
 ## Diagnostics
@@ -245,13 +290,13 @@ dotnet run --project src/Zerberuz.Server -- --urls http://localhost:5000
 In another terminal, sync the seeded `backend` profile into the shared demo cache:
 
 ```bash
-dotnet run --project src/Zerberuz.Cli -- sync-rules --server http://localhost:5000 --profile backend --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+dotnet run --project src/Zerberuz.Cli -- sync-rules --server http://localhost:5000 --profile backend --config-path samples/Zerberuz.Samples.Basic/zerberuz.json
 ```
 
 Validate the shared cache:
 
 ```bash
-dotnet run --project src/Zerberuz.Cli -- doctor --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+dotnet run --project src/Zerberuz.Cli -- doctor --config-path samples/Zerberuz.Samples.Basic/zerberuz.json
 ```
 
 Build the sample and observe configured diagnostics:
@@ -263,7 +308,7 @@ dotnet build samples/Zerberuz.Samples.Basic/Zerberuz.Samples.Basic.csproj
 Explain a diagnostic from the offline help cached by `sync-rules`:
 
 ```bash
-dotnet run --project src/Zerberuz.Cli -- explain ZBZ001 --offline --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+dotnet run --project src/Zerberuz.Cli -- explain ZBZ001 --offline --config-path samples/Zerberuz.Samples.Basic/zerberuz.json
 ```
 
 ## Server Persistence

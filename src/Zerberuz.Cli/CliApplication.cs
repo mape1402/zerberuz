@@ -34,6 +34,7 @@ public sealed class CliApplication
         {
             "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
             "sync-rules" => SyncRules(args.Skip(1).ToArray(), output, error),
+            "doctor" => Doctor(args.Skip(1).ToArray(), output, error),
             "explain" => Explain(args.Skip(1).ToArray(), output, error, fileExists, readAllText),
             "--help" or "-h" => WriteUsageAndReturn(output),
             _ => WriteUnknownCommand(args[0], error)
@@ -129,6 +130,75 @@ public sealed class CliApplication
         output.WriteLine($"Synced {paths.Team}/{paths.Profile}@{paths.RulesVersion}");
         output.WriteLine($"Cache: {paths.RulesCachePath}");
         return 0;
+    }
+
+    private static int Doctor(string[] args, TextWriter output, TextWriter error)
+    {
+        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        if (!File.Exists(configPath))
+        {
+            error.WriteLine($"Configuration was not found: {configPath}");
+            return 7;
+        }
+
+        var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
+        var paths = new SharedCachePathResolver().Resolve(
+            configuration,
+            ResolveOption(args, "--cache-root"));
+
+        output.WriteLine("Zerberuz doctor");
+        output.WriteLine($"Config: {configPath}");
+        output.WriteLine($"Team: {paths.Team}");
+        output.WriteLine($"Profile: {paths.Profile}");
+        output.WriteLine($"Requested rules version: {configuration.RulesVersion}");
+        output.WriteLine($"Cache root: {paths.CacheRoot}");
+
+        var rulesCachePath = ResolveRulesCachePath(configuration, paths);
+        if (rulesCachePath is null || !File.Exists(rulesCachePath))
+        {
+            error.WriteLine("Resolved rule cache was not found.");
+            if (!string.IsNullOrWhiteSpace(rulesCachePath))
+            {
+                error.WriteLine($"Cache: {rulesCachePath}");
+            }
+
+            return 9;
+        }
+
+        var ruleSet = new RuleSetCacheLoader().Load(File.ReadAllText(rulesCachePath));
+        var validation = new RuleSetValidator().Validate(ruleSet);
+        if (!validation.IsValid)
+        {
+            WriteValidationErrors(validation, error);
+            return 8;
+        }
+
+        output.WriteLine($"Resolved rules version: {ruleSet!.RulesVersion}");
+        output.WriteLine($"Rules cache: {rulesCachePath}");
+        output.WriteLine("Status: healthy");
+        return 0;
+    }
+
+    private static string? ResolveRulesCachePath(
+        ZerberuzProjectConfiguration configuration,
+        SharedRuleCachePaths paths)
+    {
+        if (!string.Equals(configuration.RulesVersion, "latest-compatible", StringComparison.OrdinalIgnoreCase))
+        {
+            return paths.RulesCachePath;
+        }
+
+        if (!File.Exists(paths.LatestCompatiblePointerPath))
+        {
+            return paths.LatestCompatiblePointerPath;
+        }
+
+        using var pointer = JsonDocument.Parse(File.ReadAllText(paths.LatestCompatiblePointerPath));
+        return pointer.RootElement.TryGetProperty("RulesCachePath", out var pascalPath)
+            ? pascalPath.GetString()
+            : pointer.RootElement.TryGetProperty("rulesCachePath", out var camelPath)
+                ? camelPath.GetString()
+                : null;
     }
 
     private static string ReadSource(string source)
@@ -290,6 +360,7 @@ public sealed class CliApplication
         output.WriteLine("Usage:");
         output.WriteLine("  zerberuz init [--team default] [--profile default] [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+        output.WriteLine("  zerberuz doctor [--config-path zerberuz.json] [--cache-root <path>]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
     }
 

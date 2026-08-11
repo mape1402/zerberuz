@@ -165,6 +165,88 @@ public sealed class CliApplicationTests
     }
 
     [Fact]
+    public void Run_doctor_reports_healthy_shared_cache()
+    {
+        var tempRoot = CreateTempDirectory();
+        try
+        {
+            var configPath = Path.Combine(tempRoot, "zerberuz.json");
+            var sourcePath = Path.Combine(tempRoot, "rules.json");
+            var cacheRoot = Path.Combine(tempRoot, "cache");
+
+            File.WriteAllText(configPath, """
+            {
+              "team": "elysium",
+              "profile": "backend",
+              "rulesVersion": "latest-compatible"
+            }
+            """);
+
+            File.WriteAllText(sourcePath, ValidRuleSet);
+
+            _ = new CliApplication().Run(
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new StringWriter(),
+                new StringWriter(),
+                File.Exists,
+                File.ReadAllText);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var exitCode = new CliApplication().Run(
+                new[] { "doctor", "--config-path", configPath, "--cache-root", cacheRoot },
+                output,
+                error,
+                File.Exists,
+                File.ReadAllText);
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("Status: healthy", output.ToString());
+            Assert.Contains("Resolved rules version: 2026.08.11", output.ToString());
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Run_doctor_returns_error_when_cache_is_missing()
+    {
+        var tempRoot = CreateTempDirectory();
+        try
+        {
+            var configPath = Path.Combine(tempRoot, "zerberuz.json");
+            var cacheRoot = Path.Combine(tempRoot, "cache");
+
+            File.WriteAllText(configPath, """
+            {
+              "team": "elysium",
+              "profile": "backend",
+              "rulesVersion": "latest-compatible"
+            }
+            """);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var exitCode = new CliApplication().Run(
+                new[] { "doctor", "--config-path", configPath, "--cache-root", cacheRoot },
+                output,
+                error,
+                File.Exists,
+                File.ReadAllText);
+
+            Assert.Equal(9, exitCode);
+            Assert.Contains("Resolved rule cache was not found", error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Run_init_returns_error_when_configuration_exists()
     {
         var output = new StringWriter();

@@ -142,15 +142,45 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
     private static RuleSetDefinition? LoadRuleSet(AnalyzerOptions options, CancellationToken cancellationToken)
     {
         var cacheFile = options.AdditionalFiles.FirstOrDefault(IsRulesCacheFile);
-        if (cacheFile is null)
+        if (cacheFile is not null)
+        {
+            var sourceText = cacheFile.GetText(cancellationToken);
+            return sourceText is null
+                ? null
+                : new RuleSetCacheLoader().Load(sourceText.ToString());
+        }
+
+        var configFile = options.AdditionalFiles.FirstOrDefault(IsProjectConfigurationFile);
+        if (configFile is null)
         {
             return null;
         }
 
-        var sourceText = cacheFile.GetText(cancellationToken);
-        return sourceText is null
-            ? null
-            : new RuleSetCacheLoader().Load(sourceText.ToString());
+        var configText = configFile.GetText(cancellationToken);
+        if (configText is null)
+        {
+            return null;
+        }
+
+        var configuration = ZerberuzProjectConfiguration.Load(configText.ToString());
+        var cachePaths = new SharedCachePathResolver().Resolve(configuration);
+        var ruleCachePath = new SharedRuleCacheResolver().ResolveRulesCachePath(
+            configuration,
+            cachePaths,
+            File.Exists,
+            File.ReadAllText);
+
+        if (string.IsNullOrWhiteSpace(ruleCachePath) || !File.Exists(ruleCachePath))
+        {
+            return null;
+        }
+
+        return new RuleSetCacheLoader().Load(File.ReadAllText(ruleCachePath));
+    }
+
+    private static bool IsProjectConfigurationFile(AdditionalText file)
+    {
+        return string.Equals(Path.GetFileName(file.Path), "zerberuz.json", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRulesCacheFile(AdditionalText file)

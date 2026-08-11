@@ -154,7 +154,11 @@ public sealed class CliApplication
         output.WriteLine($"Requested rules version: {configuration.RulesVersion}");
         output.WriteLine($"Cache root: {paths.CacheRoot}");
 
-        var rulesCachePath = ResolveRulesCachePath(configuration, paths);
+        var rulesCachePath = new SharedRuleCacheResolver().ResolveRulesCachePath(
+            configuration,
+            paths,
+            File.Exists,
+            File.ReadAllText);
         if (rulesCachePath is null || !File.Exists(rulesCachePath))
         {
             error.WriteLine("Resolved rule cache was not found.");
@@ -178,28 +182,6 @@ public sealed class CliApplication
         output.WriteLine($"Rules cache: {rulesCachePath}");
         output.WriteLine("Status: healthy");
         return 0;
-    }
-
-    private static string? ResolveRulesCachePath(
-        ZerberuzProjectConfiguration configuration,
-        SharedRuleCachePaths paths)
-    {
-        if (!string.Equals(configuration.RulesVersion, "latest-compatible", StringComparison.OrdinalIgnoreCase))
-        {
-            return paths.RulesCachePath;
-        }
-
-        if (!File.Exists(paths.LatestCompatiblePointerPath))
-        {
-            return paths.LatestCompatiblePointerPath;
-        }
-
-        using var pointer = JsonDocument.Parse(File.ReadAllText(paths.LatestCompatiblePointerPath));
-        return pointer.RootElement.TryGetProperty("RulesCachePath", out var pascalPath)
-            ? pascalPath.GetString()
-            : pointer.RootElement.TryGetProperty("rulesCachePath", out var camelPath)
-                ? camelPath.GetString()
-                : null;
     }
 
     private static string ReadSource(string source)
@@ -274,7 +256,11 @@ public sealed class CliApplication
             configuration,
             ResolveOption(args, "--cache-root"));
 
-        var rulesCachePath = ResolveRulesCachePath(configuration, paths);
+        var rulesCachePath = new SharedRuleCacheResolver().ResolveRulesCachePath(
+            configuration,
+            paths,
+            File.Exists,
+            File.ReadAllText);
         if (string.IsNullOrWhiteSpace(rulesCachePath))
         {
             error.WriteLine("Resolved rule cache was not found.");

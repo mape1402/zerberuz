@@ -85,6 +85,11 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
             }
 
             var location = namedType.Locations.FirstOrDefault(candidate => candidate.IsInSource);
+            if (IsGeneratedLocation(location))
+            {
+                return;
+            }
+
             var message = string.IsNullOrWhiteSpace(rule.Message)
                 ? string.Format(InterfaceNamingDescriptor.MessageFormat.ToString(), namedType.Name)
                 : rule.Message.Replace("{symbolName}", namedType.Name);
@@ -108,6 +113,11 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
         }
 
         var location = namedType.Locations.FirstOrDefault(candidate => candidate.IsInSource);
+        if (IsGeneratedLocation(location))
+        {
+            return;
+        }
+
         var sourcePath = location?.SourceTree?.FilePath;
         if (string.IsNullOrWhiteSpace(sourcePath))
         {
@@ -146,6 +156,20 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
     private static bool IsRulesCacheFile(AdditionalText file)
     {
         return string.Equals(Path.GetFileName(file.Path), "rules-cache.json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGeneratedLocation(Location? location)
+    {
+        var path = location?.SourceTree?.FilePath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(path);
+        return fileName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith(".generated.cs", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class NamingRuleState

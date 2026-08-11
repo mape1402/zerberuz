@@ -49,9 +49,11 @@ public sealed class AdminUiPageTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Contains("New Profile Version", html);
         Assert.Contains("1. Profile", html);
         Assert.Contains("2. Rules", html);
-        Assert.Contains("3. Help", html);
-        Assert.Contains("4. Review", html);
-        Assert.Contains("Add Another Rule", html);
+        Assert.Contains("3. Review", html);
+        Assert.Contains("Add New Rule", html);
+        Assert.Contains("Edit", html);
+        Assert.Contains("Delete", html);
         Assert.Contains("Publish Version", html);
+        Assert.DoesNotContain("RuleSetJson", html);
     }
 }

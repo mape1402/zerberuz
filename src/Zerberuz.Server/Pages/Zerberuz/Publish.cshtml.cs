@@ -15,12 +15,6 @@ public sealed class PublishModel : PageModel
     }
 
     [BindProperty]
-    public string RuleSetJson { get; set; } = string.Empty;
-
-    [BindProperty]
-    public string PublishMode { get; set; } = "guided";
-
-    [BindProperty]
     public string Profile { get; set; } = string.Empty;
 
     [BindProperty]
@@ -61,16 +55,11 @@ public sealed class PublishModel : PageModel
                 SuppressionGuidance = "Suppress only when external contracts force a different name."
             }
         ];
-
-        RuleSetJson = CreateDefaultJson();
     }
 
     public async Task OnPostAsync(CancellationToken cancellationToken)
     {
-        var ruleSet = string.Equals(PublishMode, "advanced", StringComparison.OrdinalIgnoreCase)
-            ? ReadAdvancedJson()
-            : CreateRuleSetFromForm();
-
+        var ruleSet = CreateRuleSetFromForm();
         if (ruleSet is null)
         {
             return;
@@ -94,20 +83,6 @@ public sealed class PublishModel : PageModel
 
         Succeeded = true;
         Message = $"Published {ruleSet.Profile}@{ruleSet.RulesVersion}.";
-    }
-
-    private RuleSetDefinition? ReadAdvancedJson()
-    {
-        try
-        {
-            return RuleSetJsonSerializer.Deserialize(RuleSetJson);
-        }
-        catch (Exception exception)
-        {
-            Succeeded = false;
-            Message = "Invalid JSON: " + exception.Message;
-            return null;
-        }
     }
 
     private RuleSetDefinition? CreateRuleSetFromForm()
@@ -170,51 +145,6 @@ public sealed class PublishModel : PageModel
                 RelatedDiagnostics = SplitCsv(rule.RelatedDiagnostics)
             }).ToList()
         };
-    }
-
-    private static string CreateDefaultJson()
-    {
-        return """
-        {
-          "schemaVersion": "1.0",
-          "rulesVersion": "2026.10.01",
-          "profile": "backend",
-          "minimumEngineVersion": "1.0.0",
-          "rules": [
-            {
-              "id": "ZBZ001",
-              "type": "naming",
-              "title": "Interfaces must start with I",
-              "severity": "warning",
-              "target": {
-                "symbolKind": "namedType",
-                "nameMustMatch": "^I[A-Z]"
-              },
-              "condition": {
-                "mustStartWith": "I"
-              },
-              "message": "Interface names must start with I."
-            }
-          ],
-          "help": [
-            {
-              "diagnosticId": "ZBZ001",
-              "title": "Interfaces must start with I",
-              "summary": "Interfaces are easier to scan when they follow the team naming convention.",
-              "why": "Consistent names reduce friction during reviews and refactors.",
-              "trigger": "An interface name does not start with I.",
-              "badExample": "public interface CustomerRepository { }",
-              "goodExample": "public interface ICustomerRepository { }",
-              "fixSteps": [
-                "Rename the interface so it starts with I.",
-                "Update references."
-              ],
-              "suppressionGuidance": "Suppress only when external contracts force a different name.",
-              "relatedDiagnostics": []
-            }
-          ]
-        }
-        """;
     }
 
     private static string? EmptyToNull(string? value)

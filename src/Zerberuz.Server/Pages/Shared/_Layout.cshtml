@@ -169,6 +169,12 @@
             color: #190d00;
         }
 
+        .button.danger {
+            border-color: rgba(255, 107, 74, .7);
+            background: rgba(255, 107, 74, .1);
+            color: var(--danger);
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -362,6 +368,47 @@
         .review-list {
             display: grid;
             gap: 10px;
+            padding: 16px;
+        }
+
+        .hidden-store {
+            display: none;
+        }
+
+        .modal-backdrop {
+            align-items: center;
+            background: rgba(0, 0, 0, .62);
+            display: none;
+            inset: 0;
+            justify-content: center;
+            padding: 22px;
+            position: fixed;
+            z-index: 30;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+            max-height: min(88vh, 920px);
+            max-width: 980px;
+            overflow: auto;
+            width: 100%;
+        }
+
+        .modal-body {
+            padding: 0;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--line);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
             padding: 16px;
         }
 

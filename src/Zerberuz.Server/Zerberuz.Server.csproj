@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zerberuz.Server</PackageId>
+    <Title>Zerberuz Server</Title>
+    <Description>Hostable ASP.NET Core server package for Zerberuz rule profile governance, versioned analyzer rule distribution, and diagnostic help endpoints.</Description>
+    <PackageTags>zerberuz;aspnetcore;efcore;roslyn;analyzers;diagnostics;rules;governance</PackageTags>
+    <PackageIcon></PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>

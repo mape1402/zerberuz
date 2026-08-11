@@ -5,44 +5,26 @@ namespace Zerberuz.Analyzers.Configuration.Tests;
 public sealed class SharedCachePathResolverTests
 {
     [Fact]
-    public void Resolve_prefers_cli_override()
+    public void Resolve_uses_common_application_data_cache_root()
     {
-        var paths = CreateResolver(environmentCacheRoot: "C:/env/cache")
-            .Resolve(
-                new ZerberuzProjectConfiguration
-                {
-                    Team = "elysium",
-                    Profile = "backend",
-                    RulesVersion = "2026.08.11",
-                    CacheRoot = "C:/config/cache"
-                },
-                cacheRootOverride: "C:/cli/cache");
+        var paths = CreateResolver(commonApplicationData: "C:/program-data")
+            .Resolve(new ZerberuzProjectConfiguration
+            {
+                Team = "elysium",
+                Profile = "backend",
+                RulesVersion = "2026.08.11"
+            });
 
-        Assert.Equal(Path.GetFullPath("C:/cli/cache"), paths.CacheRoot);
+        Assert.Equal(Path.GetFullPath("C:/program-data/Zerberuz/cache"), paths.CacheRoot);
         Assert.EndsWith(
             Path.Combine("teams", "elysium", "profiles", "backend", "versions", "2026.08.11", "rules-cache.json"),
             paths.RulesCachePath);
     }
 
     [Fact]
-    public void Resolve_prefers_config_over_environment()
+    public void Resolve_falls_back_to_user_profile_when_common_application_data_is_missing()
     {
-        var paths = CreateResolver(environmentCacheRoot: "C:/env/cache")
-            .Resolve(new ZerberuzProjectConfiguration
-            {
-                Team = "elysium",
-                Profile = "backend",
-                RulesVersion = "2026.08.11",
-                CacheRoot = "C:/config/cache"
-            });
-
-        Assert.Equal(Path.GetFullPath("C:/config/cache"), paths.CacheRoot);
-    }
-
-    [Fact]
-    public void Resolve_uses_environment_when_config_has_no_cache_root()
-    {
-        var paths = CreateResolver(environmentCacheRoot: "C:/env/cache")
+        var paths = CreateResolver(commonApplicationData: string.Empty)
             .Resolve(new ZerberuzProjectConfiguration
             {
                 Team = "elysium",
@@ -50,25 +32,11 @@ public sealed class SharedCachePathResolverTests
                 RulesVersion = "2026.08.11"
             });
 
-        Assert.Equal(Path.GetFullPath("C:/env/cache"), paths.CacheRoot);
+        Assert.Equal(Path.GetFullPath("C:/users/tester/.zerberuz/cache"), paths.CacheRoot);
     }
 
     [Fact]
-    public void Resolve_uses_os_default_when_no_overrides_exist()
-    {
-        var paths = CreateResolver(environmentCacheRoot: null)
-            .Resolve(new ZerberuzProjectConfiguration
-            {
-                Team = "elysium",
-                Profile = "backend",
-                RulesVersion = "2026.08.11"
-            });
-
-        Assert.Equal(Path.GetFullPath("C:/local/Zerberuz/cache"), paths.CacheRoot);
-    }
-
-    [Fact]
-    public void Load_reads_project_configuration_json()
+    public void Load_reads_configuration_json_without_cache_root()
     {
         var configuration = ZerberuzProjectConfiguration.Load("""
         {
@@ -76,8 +44,7 @@ public sealed class SharedCachePathResolverTests
           "profile": "backend-clean-architecture",
           "rulesVersion": "2026.08.11",
           "mode": "locked",
-          "rulesEndpoint": "https://rules.example.test",
-          "cacheRoot": "C:/zerberuz-cache"
+          "rulesEndpoint": "https://rules.example.test"
         }
         """);
 
@@ -86,14 +53,48 @@ public sealed class SharedCachePathResolverTests
         Assert.Equal("2026.08.11", configuration.RulesVersion);
         Assert.Equal("locked", configuration.Mode);
         Assert.Equal("https://rules.example.test", configuration.RulesEndpoint);
-        Assert.Equal("C:/zerberuz-cache", configuration.CacheRoot);
     }
 
-    private static SharedCachePathResolver CreateResolver(string? environmentCacheRoot)
+    [Fact]
+    public void Global_configuration_path_uses_common_application_data()
+    {
+        var path = new ZerberuzConfigurationPathResolver(
+                folder => folder == Environment.SpecialFolder.CommonApplicationData ? "C:/program-data" : string.Empty,
+                () => "C:/users/tester")
+            .ResolveGlobalConfigurationPath();
+
+        Assert.Equal(Path.GetFullPath("C:/program-data/Zerberuz/zerberuz.json"), Path.GetFullPath(path));
+    }
+
+    [Fact]
+    public void Configuration_resolver_prefers_project_json_over_global_file()
+    {
+        var resolver = new ZerberuzConfigurationResolver(new ZerberuzConfigurationPathResolver(
+            folder => folder == Environment.SpecialFolder.CommonApplicationData ? "C:/program-data" : string.Empty,
+            () => "C:/users/tester"));
+
+        var configuration = resolver.Resolve(
+            """
+            {
+              "team": "project",
+              "profile": "backend"
+            }
+            """,
+            _ => true,
+            _ => """
+            {
+              "team": "global",
+              "profile": "backend"
+            }
+            """);
+
+        Assert.Equal("project", configuration.Team);
+    }
+
+    private static SharedCachePathResolver CreateResolver(string commonApplicationData)
     {
         return new SharedCachePathResolver(
-            name => name == "ZERBERUZ_CACHE_ROOT" ? environmentCacheRoot : null,
-            folder => folder == Environment.SpecialFolder.LocalApplicationData ? "C:/local" : string.Empty,
+            folder => folder == Environment.SpecialFolder.CommonApplicationData ? commonApplicationData : string.Empty,
             () => "C:/users/tester");
     }
 }

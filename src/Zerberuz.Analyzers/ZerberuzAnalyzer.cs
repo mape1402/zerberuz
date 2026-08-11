@@ -150,19 +150,16 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
                 : new RuleSetCacheLoader().Load(sourceText.ToString());
         }
 
-        var configFile = options.AdditionalFiles.FirstOrDefault(IsProjectConfigurationFile);
-        if (configFile is null)
-        {
-            return null;
-        }
+        var configText = options.AdditionalFiles
+            .FirstOrDefault(IsProjectConfigurationFile)
+            ?.GetText(cancellationToken)
+            ?.ToString();
 
-        var configText = configFile.GetText(cancellationToken);
-        if (configText is null)
-        {
-            return null;
-        }
+        var configuration = new ZerberuzConfigurationResolver().Resolve(
+            configText,
+            File.Exists,
+            File.ReadAllText);
 
-        var configuration = ZerberuzProjectConfiguration.Load(configText.ToString());
         var cachePaths = new SharedCachePathResolver().Resolve(configuration);
         var ruleCachePath = new SharedRuleCacheResolver().ResolveRulesCachePath(
             configuration,

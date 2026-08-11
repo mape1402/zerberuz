@@ -1,4 +1,5 @@
 using Zerberuz.Analyzers;
+using global::Zerberuz.Analyzers.Configuration;
 
 namespace Zerberuz.Analyzers.Tests;
 
@@ -7,30 +8,25 @@ public sealed class ZerberuzSharedCacheAnalyzerTests
     [Fact]
     public async Task Analyzer_loads_rules_from_shared_cache_using_project_configuration()
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "zerberuz-analyzer-tests-" + Guid.NewGuid().ToString("N"));
+        var team = "elysium-test-" + Guid.NewGuid().ToString("N");
+        var profile = "backend";
+        var configuration = new ZerberuzProjectConfiguration
+        {
+            Team = team,
+            Profile = profile,
+            RulesVersion = "latest-compatible"
+        };
+        var paths = new SharedCachePathResolver().Resolve(configuration);
         try
         {
-            var cacheRoot = Path.Combine(tempRoot, "cache");
-            var rulesCachePath = Path.Combine(
-                cacheRoot,
-                "teams",
-                "elysium",
-                "profiles",
-                "backend",
-                "versions",
-                "2026.08.11",
-                "rules-cache.json");
+            var versionPaths = SharedRuleCachePaths.Create(
+                paths.CacheRoot,
+                team,
+                profile,
+                "2026.08.11");
 
-            var pointerPath = Path.Combine(
-                cacheRoot,
-                "teams",
-                "elysium",
-                "profiles",
-                "backend",
-                "latest-compatible.json");
-
-            Directory.CreateDirectory(Path.GetDirectoryName(rulesCachePath)!);
-            File.WriteAllText(rulesCachePath, """
+            Directory.CreateDirectory(Path.GetDirectoryName(versionPaths.RulesCachePath)!);
+            File.WriteAllText(versionPaths.RulesCachePath, """
             {
               "schemaVersion": "1.0",
               "rulesVersion": "2026.08.11",
@@ -59,13 +55,13 @@ public sealed class ZerberuzSharedCacheAnalyzerTests
             }
             """);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(pointerPath)!);
-            File.WriteAllText(pointerPath, $$"""
+            Directory.CreateDirectory(Path.GetDirectoryName(paths.LatestCompatiblePointerPath)!);
+            File.WriteAllText(paths.LatestCompatiblePointerPath, $$"""
             {
-              "team": "elysium",
-              "profile": "backend",
+              "team": "{{team}}",
+              "profile": "{{profile}}",
               "rulesVersion": "2026.08.11",
-              "rulesCachePath": "{{rulesCachePath.Replace("\\", "\\\\")}}"
+              "rulesCachePath": "{{versionPaths.RulesCachePath.Replace("\\", "\\\\")}}"
             }
             """);
 
@@ -76,10 +72,9 @@ public sealed class ZerberuzSharedCacheAnalyzerTests
                 {
                     new InMemoryAdditionalText("zerberuz.json", $$"""
                     {
-                      "team": "elysium",
-                      "profile": "backend",
-                      "rulesVersion": "latest-compatible",
-                      "cacheRoot": "{{cacheRoot.Replace("\\", "\\\\")}}"
+                      "team": "{{team}}",
+                      "profile": "{{profile}}",
+                      "rulesVersion": "latest-compatible"
                     }
                     """)
                 });
@@ -89,9 +84,10 @@ public sealed class ZerberuzSharedCacheAnalyzerTests
         }
         finally
         {
-            if (Directory.Exists(tempRoot))
+            var teamDirectory = Path.Combine(paths.CacheRoot, "teams", team);
+            if (Directory.Exists(teamDirectory))
             {
-                Directory.Delete(tempRoot, recursive: true);
+                Directory.Delete(teamDirectory, recursive: true);
             }
         }
     }

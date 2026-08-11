@@ -35,7 +35,8 @@ public sealed class CliApplication
         Func<string, bool> fileExists,
         Func<string, string> readAllText,
         Action<string, string>? writeAllText = null,
-        Func<string, string>? readSource = null)
+        Func<string, string>? readSource = null,
+        Func<ZerberuzProjectConfiguration, SharedRuleCachePaths>? resolveCachePaths = null)
     {
         if (args.Length == 0)
         {
@@ -46,9 +47,25 @@ public sealed class CliApplication
         return args[0] switch
         {
             "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
-            "sync-rules" => SyncRules(args.Skip(1).ToArray(), output, error, readSource ?? ReadSource),
-            "doctor" => Doctor(args.Skip(1).ToArray(), output, error),
-            "explain" => Explain(args.Skip(1).ToArray(), output, error, fileExists, readAllText),
+            "config" => Config(args.Skip(1).ToArray(), output, error),
+            "sync-rules" => SyncRules(
+                args.Skip(1).ToArray(),
+                output,
+                error,
+                readSource ?? ReadSource,
+                resolveCachePaths ?? (configuration => new SharedCachePathResolver().Resolve(configuration))),
+            "doctor" => Doctor(
+                args.Skip(1).ToArray(),
+                output,
+                error,
+                resolveCachePaths ?? (configuration => new SharedCachePathResolver().Resolve(configuration))),
+            "explain" => Explain(
+                args.Skip(1).ToArray(),
+                output,
+                error,
+                fileExists,
+                readAllText,
+                resolveCachePaths ?? (configuration => new SharedCachePathResolver().Resolve(configuration))),
             "--help" or "-h" => WriteUsageAndReturn(output),
             _ => WriteUnknownCommand(args[0], error)
         };
@@ -77,8 +94,7 @@ public sealed class CliApplication
           "profile": "{{profile}}",
           "rulesVersion": "latest-compatible",
           "mode": "latest-compatible",
-          "rulesEndpoint": "https://rules.zerberuz.dev",
-          "cacheRoot": null
+          "rulesEndpoint": "https://rules.zerberuz.dev"
         }
         """);
 
@@ -86,22 +102,90 @@ public sealed class CliApplication
         return 0;
     }
 
+    private static int Config(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args.Length == 0)
+        {
+            error.WriteLine("Configuration command is required.");
+            error.WriteLine("Usage: zerberuz config <path|init|show>");
+            return 11;
+        }
+
+        return args[0] switch
+        {
+            "path" => ConfigPath(output),
+            "init" => ConfigInit(args.Skip(1).ToArray(), output, error),
+            "show" => ConfigShow(output, error),
+            _ => WriteUnknownCommand("config " + args[0], error)
+        };
+    }
+
+    private static int ConfigPath(TextWriter output)
+    {
+        output.WriteLine(new ZerberuzConfigurationPathResolver().ResolveGlobalConfigurationPath());
+        return 0;
+    }
+
+    private static int ConfigInit(string[] args, TextWriter output, TextWriter error)
+    {
+        var configPath = new ZerberuzConfigurationPathResolver().ResolveGlobalConfigurationPath();
+        if (File.Exists(configPath) && !args.Contains("--force", StringComparer.Ordinal))
+        {
+            error.WriteLine($"Global configuration already exists: {configPath}");
+            error.WriteLine("Use --force to replace it.");
+            return 12;
+        }
+
+        var team = ResolveOption(args, "--team") ?? "default";
+        var profile = ResolveOption(args, "--profile") ?? "default";
+        var rulesVersion = ResolveOption(args, "--version") ?? "latest-compatible";
+        var rulesEndpoint = ResolveOption(args, "--server") ?? "https://rules.zerberuz.dev";
+
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        File.WriteAllText(configPath, $$"""
+        {
+          "team": "{{team}}",
+          "profile": "{{profile}}",
+          "rulesVersion": "{{rulesVersion}}",
+          "mode": "latest-compatible",
+          "rulesEndpoint": "{{rulesEndpoint}}"
+        }
+        """);
+
+        output.WriteLine($"Created global configuration: {configPath}");
+        return 0;
+    }
+
+    private static int ConfigShow(TextWriter output, TextWriter error)
+    {
+        var configPath = new ZerberuzConfigurationPathResolver().ResolveGlobalConfigurationPath();
+        if (!File.Exists(configPath))
+        {
+            error.WriteLine($"Global configuration was not found: {configPath}");
+            return 13;
+        }
+
+        output.Write(File.ReadAllText(configPath));
+        return 0;
+    }
+
     private static int SyncRules(
         string[] args,
         TextWriter output,
         TextWriter error,
-        Func<string, string> readSource)
+        Func<string, string> readSource,
+        Func<ZerberuzProjectConfiguration, SharedRuleCachePaths> resolveCachePaths)
     {
         var source = ResolveSyncSource(args);
         if (string.IsNullOrWhiteSpace(source))
         {
             error.WriteLine("Rule source is required.");
-            error.WriteLine("Usage: zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+            error.WriteLine("Usage: zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json]");
             error.WriteLine("   or: zerberuz sync-rules --server <url> --profile <name> [--version latest-compatible]");
             return 6;
         }
 
-        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        var configPath = ResolveConfigurationPath(args);
         if (!File.Exists(configPath))
         {
             error.WriteLine($"Configuration was not found: {configPath}");
@@ -124,13 +208,10 @@ public sealed class CliApplication
             Profile = configuration.Profile,
             RulesVersion = ruleSet!.RulesVersion,
             Mode = configuration.Mode,
-            RulesEndpoint = configuration.RulesEndpoint,
-            CacheRoot = configuration.CacheRoot
+            RulesEndpoint = configuration.RulesEndpoint
         };
 
-        var paths = new SharedCachePathResolver().Resolve(
-            effectiveConfiguration,
-            ResolveOption(args, "--cache-root"));
+        var paths = resolveCachePaths(effectiveConfiguration);
 
         var ruleSetPayload = JsonSerializer.Serialize(ruleSet, JsonOptions);
         AtomicWriteValidatedRuleSet(paths.RulesCachePath, ruleSetPayload);
@@ -186,9 +267,13 @@ public sealed class CliApplication
         return new RuleSetCacheLoader().Load(payload);
     }
 
-    private static int Doctor(string[] args, TextWriter output, TextWriter error)
+    private static int Doctor(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<ZerberuzProjectConfiguration, SharedRuleCachePaths> resolveCachePaths)
     {
-        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        var configPath = ResolveConfigurationPath(args);
         if (!File.Exists(configPath))
         {
             error.WriteLine($"Configuration was not found: {configPath}");
@@ -196,9 +281,7 @@ public sealed class CliApplication
         }
 
         var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
-        var paths = new SharedCachePathResolver().Resolve(
-            configuration,
-            ResolveOption(args, "--cache-root"));
+        var paths = resolveCachePaths(configuration);
 
         output.WriteLine("Zerberuz doctor");
         output.WriteLine($"Config: {configPath}");
@@ -254,7 +337,8 @@ public sealed class CliApplication
         TextWriter output,
         TextWriter error,
         Func<string, bool> fileExists,
-        Func<string, string> readAllText)
+        Func<string, string> readAllText,
+        Func<ZerberuzProjectConfiguration, SharedRuleCachePaths> resolveCachePaths)
     {
         if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
         {
@@ -266,7 +350,7 @@ public sealed class CliApplication
         var diagnosticId = args[0];
         if (args.Contains("--offline", StringComparer.Ordinal))
         {
-            return ExplainOffline(diagnosticId, args, output, error);
+            return ExplainOffline(diagnosticId, args, output, error, resolveCachePaths);
         }
 
         var cachePath = ResolveOption(args, "--cache-path") ?? ".zerberuz/rules-cache.json";
@@ -295,9 +379,10 @@ public sealed class CliApplication
         string diagnosticId,
         string[] args,
         TextWriter output,
-        TextWriter error)
+        TextWriter error,
+        Func<ZerberuzProjectConfiguration, SharedRuleCachePaths> resolveCachePaths)
     {
-        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        var configPath = ResolveConfigurationPath(args);
         if (!File.Exists(configPath))
         {
             error.WriteLine($"Configuration was not found: {configPath}");
@@ -305,9 +390,7 @@ public sealed class CliApplication
         }
 
         var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
-        var paths = new SharedCachePathResolver().Resolve(
-            configuration,
-            ResolveOption(args, "--cache-root"));
+        var paths = resolveCachePaths(configuration);
 
         var rulesCachePath = new SharedRuleCacheResolver().ResolveRulesCachePath(
             configuration,
@@ -387,6 +470,22 @@ public sealed class CliApplication
         }
 
         return null;
+    }
+
+    private static string ResolveConfigurationPath(string[] args)
+    {
+        var explicitPath = ResolveOption(args, "--config-path");
+        if (!string.IsNullOrWhiteSpace(explicitPath))
+        {
+            return explicitPath!;
+        }
+
+        if (File.Exists("zerberuz.json"))
+        {
+            return "zerberuz.json";
+        }
+
+        return new ZerberuzConfigurationPathResolver().ResolveGlobalConfigurationPath();
     }
 
     private static void WriteHelp(DiagnosticHelpDefinition help, TextWriter output)
@@ -510,11 +609,14 @@ public sealed class CliApplication
         output.WriteLine();
         output.WriteLine("Usage:");
         output.WriteLine("  zerberuz init [--team default] [--profile default] [--config-path zerberuz.json]");
-        output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+        output.WriteLine("  zerberuz config path");
+        output.WriteLine("  zerberuz config init [--team default] [--profile default] [--server <url>] [--version latest-compatible] [--force]");
+        output.WriteLine("  zerberuz config show");
+        output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz sync-rules --server <url> --profile <name> [--version latest-compatible]");
-        output.WriteLine("  zerberuz doctor [--config-path zerberuz.json] [--cache-root <path>]");
+        output.WriteLine("  zerberuz doctor [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
-        output.WriteLine("  zerberuz explain ZBZ001 --offline [--config-path zerberuz.json] [--cache-root <path>]");
+        output.WriteLine("  zerberuz explain ZBZ001 --offline [--config-path zerberuz.json]");
     }
 
     private static int WriteUnknownCommand(string command, TextWriter error)

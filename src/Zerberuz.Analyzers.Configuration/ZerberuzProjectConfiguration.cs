@@ -17,8 +17,6 @@ public sealed class ZerberuzProjectConfiguration
 
     public string RulesEndpoint { get; set; } = "https://rules.zerberuz.dev";
 
-    public string? CacheRoot { get; set; }
-
     public static ZerberuzProjectConfiguration Load(string json)
     {
         if (string.IsNullOrWhiteSpace(json))

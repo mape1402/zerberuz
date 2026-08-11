@@ -1,4 +1,5 @@
 using Zerberuz.Cli;
+using Zerberuz.Analyzers.Configuration;
 
 namespace Zerberuz.Cli.Tests;
 
@@ -50,11 +51,12 @@ public sealed class CliApplicationTests
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             var rulesCachePath = Path.Combine(
                 cacheRoot,
@@ -128,11 +130,12 @@ public sealed class CliApplicationTests
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             Assert.Equal(0, exitCode);
             Assert.Contains("Synced elysium/backend@2026.08.11", output.ToString());
@@ -206,11 +209,12 @@ public sealed class CliApplicationTests
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             Assert.Equal(8, exitCode);
             Assert.Equal("existing-cache", File.ReadAllText(rulesCachePath));
@@ -243,20 +247,22 @@ public sealed class CliApplicationTests
             File.WriteAllText(sourcePath, ValidRuleSet);
 
             _ = new CliApplication().Run(
-                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath },
                 new StringWriter(),
                 new StringWriter(),
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "doctor", "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "doctor", "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             Assert.Equal(0, exitCode);
             Assert.Contains("Status: healthy", output.ToString());
@@ -289,11 +295,12 @@ public sealed class CliApplicationTests
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "doctor", "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "doctor", "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             Assert.Equal(9, exitCode);
             Assert.Contains("Resolved rule cache was not found", error.ToString());
@@ -325,20 +332,22 @@ public sealed class CliApplicationTests
             File.WriteAllText(sourcePath, ValidRuleSetWithDetailedHelp);
 
             _ = new CliApplication().Run(
-                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath },
                 new StringWriter(),
                 new StringWriter(),
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             var output = new StringWriter();
             var error = new StringWriter();
             var exitCode = new CliApplication().Run(
-                new[] { "explain", "ZBZ001", "--offline", "--config-path", configPath, "--cache-root", cacheRoot },
+                new[] { "explain", "ZBZ001", "--offline", "--config-path", configPath },
                 output,
                 error,
                 File.Exists,
-                File.ReadAllText);
+                File.ReadAllText,
+                resolveCachePaths: ResolveCachePaths(cacheRoot));
 
             Assert.Equal(0, exitCode);
             Assert.Contains("# ZBZ001: Interfaces must start with I", output.ToString());
@@ -431,6 +440,15 @@ public sealed class CliApplicationTests
         var path = Path.Combine(Path.GetTempPath(), "zerberuz-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private static Func<ZerberuzProjectConfiguration, SharedRuleCachePaths> ResolveCachePaths(string cacheRoot)
+    {
+        return configuration => SharedRuleCachePaths.Create(
+            cacheRoot,
+            configuration.Team,
+            configuration.Profile,
+            configuration.RulesVersion);
     }
 
     private const string ValidRuleSet = """

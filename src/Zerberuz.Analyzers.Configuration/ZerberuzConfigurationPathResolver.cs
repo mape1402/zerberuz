@@ -1,18 +1,18 @@
 namespace Zerberuz.Analyzers.Configuration;
 
-public sealed class SharedCachePathResolver
+public sealed class ZerberuzConfigurationPathResolver
 {
     private readonly Func<Environment.SpecialFolder, string> getFolderPath;
     private readonly Func<string> getUserProfilePath;
 
-    public SharedCachePathResolver()
+    public ZerberuzConfigurationPathResolver()
         : this(
             Environment.GetFolderPath,
             () => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
     {
     }
 
-    public SharedCachePathResolver(
+    public ZerberuzConfigurationPathResolver(
         Func<Environment.SpecialFolder, string> getFolderPath,
         Func<string> getUserProfilePath)
     {
@@ -20,24 +20,14 @@ public sealed class SharedCachePathResolver
         this.getUserProfilePath = getUserProfilePath;
     }
 
-    public SharedRuleCachePaths Resolve(ZerberuzProjectConfiguration configuration)
-    {
-        return SharedRuleCachePaths.Create(
-            ResolveDefaultCacheRoot(),
-            configuration.Team,
-            configuration.Profile,
-            configuration.RulesVersion);
-    }
-
-    private string ResolveDefaultCacheRoot()
+    public string ResolveGlobalConfigurationPath()
     {
         var commonApplicationData = getFolderPath(Environment.SpecialFolder.CommonApplicationData);
         if (!string.IsNullOrWhiteSpace(commonApplicationData))
         {
-            return Path.Combine(commonApplicationData, "Zerberuz", "cache");
+            return Path.Combine(commonApplicationData, "Zerberuz", "zerberuz.json");
         }
 
-        var userProfile = getUserProfilePath();
-        return Path.Combine(userProfile, ".zerberuz", "cache");
+        return Path.Combine(getUserProfilePath(), ".zerberuz", "zerberuz.json");
     }
 }

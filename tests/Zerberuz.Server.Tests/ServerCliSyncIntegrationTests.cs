@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Zerberuz.Analyzers.Configuration;
 using Zerberuz.Cli;
 
 namespace Zerberuz.Server.Tests;
@@ -44,15 +45,18 @@ public sealed class ServerCliSyncIntegrationTests : IClassFixture<WebApplication
                     "--profile",
                     "backend",
                     "--config-path",
-                    configPath,
-                    "--cache-root",
-                    cacheRoot
+                    configPath
                 },
                 output,
                 error,
                 File.Exists,
                 File.ReadAllText,
-                readSource: source => ReadFromTestServer(client, source));
+                readSource: source => ReadFromTestServer(client, source),
+                resolveCachePaths: configuration => SharedRuleCachePaths.Create(
+                    cacheRoot,
+                    configuration.Team,
+                    configuration.Profile,
+                    configuration.RulesVersion));
 
             var rulesCachePath = Path.Combine(
                 cacheRoot,

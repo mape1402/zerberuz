@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <ProjectReference Include="..\..\src\Zerberuz.Analyzers.Configuration\Zerberuz.Analyzers.Configuration.csproj" />
     <ProjectReference Include="..\..\src\Zerberuz.Analyzers\Zerberuz.Analyzers.csproj" />
   </ItemGroup>
 

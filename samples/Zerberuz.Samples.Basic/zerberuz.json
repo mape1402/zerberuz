@@ -3,6 +3,5 @@
   "profile": "backend",
   "rulesVersion": "latest-compatible",
   "mode": "latest-compatible",
-  "rulesEndpoint": "http://localhost:5000",
-  "cacheRoot": ".zerberuz/cache"
+  "rulesEndpoint": "http://localhost:5000"
 }

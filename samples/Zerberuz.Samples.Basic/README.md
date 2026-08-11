@@ -17,7 +17,7 @@ dotnet run --project src/Zerberuz.Server -- --urls http://localhost:5000
 Then sync rules in another terminal:
 
 ```bash
-dotnet run --project src/Zerberuz.Cli -- sync-rules --server http://localhost:5000 --profile backend --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
+dotnet run --project src/Zerberuz.Cli -- sync-rules --server http://localhost:5000 --profile backend --config-path samples/Zerberuz.Samples.Basic/zerberuz.json
 ```
 
 Build the sample:

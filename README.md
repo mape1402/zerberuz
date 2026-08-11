@@ -95,6 +95,7 @@ GET  /api/v1/profiles/{profile}/latest-compatible
 GET  /api/v1/diagnostics/{diagnosticId}
 GET  /api/v1/profiles/{profile}/versions/{version}/diagnostics/{diagnosticId}/help
 POST /api/v1/rules/validate
+POST /api/v1/profiles/{profile}/versions
 ```
 
 Disable the demo seed data for production hosts:
@@ -209,6 +210,22 @@ The important fields are:
 | `profile` | Rule profile served by Zerberuz Server, such as `backend`. |
 | `rulesVersion` | Exact version like `2026.08.11`, or `latest-compatible`. |
 | `rulesEndpoint` | Zerberuz Server base URL. |
+
+## Publish Rules
+
+Rule files can be validated locally before they are published:
+
+```bash
+zerberuz rules validate ./rules/backend.json
+```
+
+Publish a validated rule profile to your hosted server:
+
+```bash
+zerberuz rules publish ./rules/backend.json --server http://localhost:5000
+```
+
+The server validates the payload again, rejects duplicate `profile@rulesVersion` pairs, persists the rule profile with EF, and returns the published version metadata with a SHA-256 hash.
 
 ## Sync Rules
 

@@ -10,23 +10,12 @@ The analyzer is designed to be fast and deterministic: it reads local, validated
 
 ## Packages
 
-```bash
-dotnet add package Zerberuz.Analyzers
-```
-
-Planned supporting packages:
-
-```bash
-dotnet tool install --global Zerberuz.Cli
-dotnet add package Zerberuz.Server.Contracts
-```
-
 | Package | Purpose |
 | --- | --- |
 | `Zerberuz.Analyzers` | Roslyn analyzer package installed by consuming projects. |
 | `Zerberuz.Cli` | Rule sync, cache validation, diagnostics explanation, and CI tooling. |
 | `Zerberuz.Server.Contracts` | Shared contracts for rule payloads and diagnostic help. |
-| `Zerberuz.Server` | Rule governance API and diagnostic help center. |
+| `Zerberuz.Server` | Hostable ASP.NET Core package for rule governance API and diagnostic help center. |
 
 ## Big Picture
 
@@ -40,19 +29,175 @@ Server = governance, versioning, distribution
 
 Zerberuz should download declarative rule definitions, not executable analyzer logic.
 
-## Getting Started
+## Quick Start
 
-Initialize a repository:
+Zerberuz has two integration points:
+
+1. Host `Zerberuz.Server` in an ASP.NET Core app owned by your team.
+2. Install `Zerberuz.Analyzers` in each .NET project and point it at a shared rule cache with `zerberuz.json`.
+
+The analyzer never calls the server during Roslyn analysis. The CLI syncs rules from the server into a shared cache, and the analyzer reads that local cache during IDE/build work.
+
+## Host Zerberuz.Server
+
+`Zerberuz.Server` is a hostable NuGet package. Your application owns hosting, authentication, authorization, observability, deployment, connection strings, and infrastructure.
+
+Create or use an ASP.NET Core host:
 
 ```bash
-zerberuz init --team elysium --profile backend-clean-architecture
-zerberuz sync-rules --source ./rules/backend-clean-architecture.json
+dotnet new web -n Company.AnalyzerRules.Host
+cd Company.AnalyzerRules.Host
+dotnet add package Zerberuz.Server
+```
+
+Configure the database connection in `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "Zerberuz": "Data Source=zerberuz.db"
+  }
+}
+```
+
+Wire Zerberuz into `Program.cs`:
+
+```csharp
+using Zerberuz.Server;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddZerberuzServer(options =>
+{
+    options.UseSqlite(builder.Configuration.GetConnectionString("Zerberuz")!);
+});
+
+var app = builder.Build();
+
+await app.Services.InitializeZerberuzServerAsync();
+
+app.MapZerberuzServer();
+app.Run();
+```
+
+Run the host:
+
+```bash
+dotnet run --urls http://localhost:5000
+```
+
+The package maps these endpoints:
+
+```text
+GET  /api/v1/profiles/{profile}/versions
+GET  /api/v1/profiles/{profile}/versions/{version}
+GET  /api/v1/profiles/{profile}/latest-compatible
+GET  /api/v1/diagnostics/{diagnosticId}
+GET  /api/v1/profiles/{profile}/versions/{version}/diagnostics/{diagnosticId}/help
+POST /api/v1/rules/validate
+```
+
+Disable the demo seed data for production hosts:
+
+```csharp
+builder.Services.AddZerberuzServer(options =>
+{
+    options.SeedDefaultProfiles = false;
+    options.UseSqlite(builder.Configuration.GetConnectionString("Zerberuz")!);
+});
+```
+
+Use a custom EF provider through the host:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Zerberuz.Server;
+
+builder.Services.AddZerberuzServer(options =>
+{
+    options.UseDbContext(db =>
+    {
+        db.UseSqlite(builder.Configuration.GetConnectionString("Zerberuz")!);
+    });
+});
+```
+
+## Configure A Project
+
+Install the analyzer in the project that should receive diagnostics:
+
+```bash
+dotnet add package Zerberuz.Analyzers
+```
+
+Add `zerberuz.json` at the project root:
+
+```json
+{
+  "team": "elysium",
+  "profile": "backend",
+  "rulesVersion": "latest-compatible",
+  "mode": "latest-compatible",
+  "rulesEndpoint": "http://localhost:5000",
+  "cacheRoot": "C:/elysium/zerberuz-cache"
+}
+```
+
+Include `zerberuz.json` as an analyzer additional file:
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="zerberuz.json" />
+</ItemGroup>
+```
+
+The important fields are:
+
+| Field | Purpose |
+| --- | --- |
+| `team` | Cache namespace for a team or organization. |
+| `profile` | Rule profile served by Zerberuz Server, such as `backend`. |
+| `rulesVersion` | Exact version like `2026.08.11`, or `latest-compatible`. |
+| `rulesEndpoint` | Zerberuz Server base URL. |
+| `cacheRoot` | Shared cache root used by all projects on the machine/team image. |
+
+## Sync Rules
+
+Install the CLI when published as a tool:
+
+```bash
+dotnet tool install --global Zerberuz.Cli
+```
+
+Sync rules from your hosted server:
+
+```bash
+zerberuz sync-rules --server http://localhost:5000 --profile backend --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+```
+
+Validate the local/shared cache:
+
+```bash
+zerberuz doctor --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+```
+
+Build the project:
+
+```bash
 dotnet build
 ```
 
-The CLI writes rules into a shared machine/team cache, then the analyzer reads that local cache through `zerberuz.json`. No analyzer callback calls the network.
+Explain a diagnostic from the offline help synced into the cache:
 
-Default shared cache resolution:
+```bash
+zerberuz explain ZBZ001 --offline --config-path zerberuz.json --cache-root C:/elysium/zerberuz-cache
+```
+
+## Shared Cache
+
+Use one cache root per team/machine image so every project reuses the same downloaded rules.
+
+Resolution order:
 
 ```text
 --cache-root
@@ -68,7 +213,7 @@ Windows: %LOCALAPPDATA%/Zerberuz/cache
 Linux/macOS: ~/.zerberuz/cache
 ```
 
-Shared cache layout:
+Layout:
 
 ```text
 <cacheRoot>/teams/<team>/profiles/<profile>/versions/<rulesVersion>/rules-cache.json
@@ -76,20 +221,16 @@ Shared cache layout:
 <cacheRoot>/teams/<team>/profiles/<profile>/latest-compatible.json
 ```
 
-The analyzer reports diagnostics such as:
+## Diagnostics
+
+The analyzer reports diagnostics from the synced rules:
 
 ```text
 ZBZ001: Interface 'Repository' must start with 'I'.
 ZBZ100: Service class 'OrderService' must be placed under a Services folder.
 ```
 
-Each diagnostic should include a help link and be explainable from the CLI:
-
-```bash
-zerberuz explain ZBZ001
-zerberuz explain ZBZ001 --offline
-zerberuz doctor
-```
+Diagnostic help can be served online by `Zerberuz.Server` or read offline from the synced cache.
 
 ## Local End-to-End Demo
 
@@ -125,83 +266,14 @@ Explain a diagnostic from the offline help cached by `sync-rules`:
 dotnet run --project src/Zerberuz.Cli -- explain ZBZ001 --offline --config-path samples/Zerberuz.Samples.Basic/zerberuz.json --cache-root .zerberuz/cache
 ```
 
-The demo cache is shared at `.zerberuz/cache` for local development. Teams can point `cacheRoot` or `ZERBERUZ_CACHE_ROOT` to a common machine/team location to avoid downloading the same rules per project.
-
 ## Server Persistence
 
-`Zerberuz.Server` uses EF Core with SQLite by default. On startup, it creates the local database if needed and seeds the initial `backend` profile.
+`Zerberuz.Server` uses EF Core. SQLite is the default provider for the current package and local demo. On startup, `InitializeZerberuzServerAsync()` creates the database if needed and optionally seeds the initial `backend` profile.
 
-Default database path:
+Default local database path:
 
 ```text
 <server-bin>/zerberuz.db
-```
-
-Override the database with the `ConnectionStrings:Zerberuz` connection string:
-
-```bash
-dotnet run --project src/Zerberuz.Server --ConnectionStrings:Zerberuz "Data Source=C:/elysium/zerberuz-data/zerberuz.db"
-```
-
-The HTTP endpoints still read through `IProfileRuleStore`, so the API surface stays stable while the persistence provider evolves.
-
-## Host Zerberuz.Server
-
-`Zerberuz.Server` is designed to be consumed as a hostable NuGet package. Your ASP.NET Core app owns hosting, authentication, authorization, observability, deployment, and database configuration.
-
-Install:
-
-```bash
-dotnet add package Zerberuz.Server
-```
-
-Minimal host:
-
-```csharp
-using Zerberuz.Server;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddZerberuzServer(options =>
-{
-    options.UseSqlite(builder.Configuration.GetConnectionString("Zerberuz")!);
-});
-
-var app = builder.Build();
-await app.Services.InitializeZerberuzServerAsync();
-
-app.MapZerberuzServer();
-app.Run();
-```
-
-Disable demo seed data:
-
-```csharp
-builder.Services.AddZerberuzServer(options =>
-{
-    options.SeedDefaultProfiles = false;
-    options.UseSqlite("Data Source=zerberuz.db");
-});
-```
-
-Use a custom EF provider:
-
-```csharp
-builder.Services.AddZerberuzServer(options =>
-{
-    options.UseDbContext(db => db.UseSqlite("Data Source=zerberuz.db"));
-});
-```
-
-The package maps the same endpoints used by the local demo:
-
-```text
-GET  /api/v1/profiles/{profile}/versions
-GET  /api/v1/profiles/{profile}/versions/{version}
-GET  /api/v1/profiles/{profile}/latest-compatible
-GET  /api/v1/diagnostics/{diagnosticId}
-GET  /api/v1/profiles/{profile}/versions/{version}/diagnostics/{diagnosticId}/help
-POST /api/v1/rules/validate
 ```
 
 ## Rule Configuration
@@ -223,7 +295,8 @@ Example rule cache payload:
         "symbolKind": "interface"
       },
       "condition": {
-        "nameMustMatch": "^I[A-Z].*"
+        "mustStartWith": "I",
+        "mustMatch": "^I[A-Z].*"
       },
       "message": "Interface '{symbolName}' must start with 'I'."
     }

@@ -2,14 +2,14 @@
 @using global::Zerberuz.Analyzers.Rules
 @model PublishModel
 @{
-    ViewData["Title"] = "Publish";
+    ViewData["Title"] = "New Version";
 }
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Publishing</p>
-        <h1>Create Profile Version</h1>
-        <p class="lead">Profiles are created automatically the first time you publish a version for a new profile name.</p>
+        <p class="eyebrow">Builder</p>
+        <h1>New Profile Version</h1>
+        <p class="lead">Create a profile when the name is new, or publish a new immutable version for an existing profile.</p>
     </div>
 </div>
 
@@ -18,238 +18,300 @@
     <div class="message @(Model.Succeeded ? "ok" : "error")">@Model.Message</div>
 }
 
-<form method="post">
+<form method="post" id="profile-version-form">
     @Html.AntiForgeryToken()
+    <input type="hidden" name="PublishMode" value="guided" />
 
-    <section class="panel">
-        <div class="panel-header">
-            <strong>Profile Version</strong>
-            <span class="muted">Profile + rules version must be unique</span>
-        </div>
-        <div class="form-grid">
-            <div>
-                <label for="Profile">Profile</label>
-                <input id="Profile" name="Profile" value="@Model.Profile" placeholder="backend" />
-            </div>
-            <div>
-                <label for="RulesVersion">Rules version</label>
-                <input id="RulesVersion" name="RulesVersion" value="@Model.RulesVersion" placeholder="2026.10.01" />
-            </div>
-            <div>
-                <label for="MinimumEngineVersion">Minimum engine</label>
-                <input id="MinimumEngineVersion" name="MinimumEngineVersion" value="@Model.MinimumEngineVersion" placeholder="1.0.0" />
-            </div>
-        </div>
-    </section>
+    <div class="wizard">
+        <ol class="stepper" aria-label="Profile version steps">
+            <li class="active" data-step-indicator="1">
+                <strong>1. Profile</strong>
+                <span>Name the ruleset and version.</span>
+            </li>
+            <li data-step-indicator="2">
+                <strong>2. Rules</strong>
+                <span>Define diagnostics and conditions.</span>
+            </li>
+            <li data-step-indicator="3">
+                <strong>3. Help</strong>
+                <span>Explain each diagnostic.</span>
+            </li>
+            <li data-step-indicator="4">
+                <strong>4. Review</strong>
+                <span>Publish when everything looks right.</span>
+            </li>
+        </ol>
 
-    <section class="rule-grid" id="rules">
-        @for (var index = 0; index < Model.Rules.Count; index++)
-        {
-            <article class="rule-card">
-                <div class="rule-header">
-                    <div>
-                        <span class="pill">Rule @(index + 1)</span>
-                        <div class="rule-title">Diagnostic and Condition</div>
-                    </div>
-                    <span class="pill amber">Required help</span>
+        <div>
+            <section class="panel wizard-step active" data-step="1">
+                <div class="panel-header">
+                    <strong>Profile</strong>
+                    <span class="muted">This creates the destination for analyzer rules.</span>
                 </div>
-
+                <p class="step-copy">Use stable names such as backend, frontend, contracts, or platform. If the profile already exists, the new version is added to its history.</p>
                 <div class="form-grid">
                     <div>
-                        <label for="Rules_@(index)__Id">Diagnostic id</label>
-                        <input id="Rules_@(index)__Id" name="Rules[@index].Id" value="@Model.Rules[index].Id" placeholder="ZBZ001" />
+                        <label for="Profile">Profile name</label>
+                        <input id="Profile" name="Profile" value="@Model.Profile" placeholder="backend" data-review="profile" />
                     </div>
                     <div>
-                        <label for="Rules_@(index)__Type">Rule type</label>
-                        <select id="Rules_@(index)__Type" name="Rules[@index].Type">
-                            @foreach (var value in Enum.GetValues<ZerberuzRuleType>().Where(value => value != ZerberuzRuleType.Unknown))
-                            {
-                                <option value="@value" selected="@(Model.Rules[index].Type == value)">@value</option>
-                            }
-                        </select>
+                        <label for="RulesVersion">Rules version</label>
+                        <input id="RulesVersion" name="RulesVersion" value="@Model.RulesVersion" placeholder="2026.10.01" data-review="version" />
                     </div>
                     <div>
-                        <label for="Rules_@(index)__Severity">Severity</label>
-                        <select id="Rules_@(index)__Severity" name="Rules[@index].Severity">
-                            @foreach (var value in Enum.GetValues<ZerberuzDiagnosticSeverity>())
-                            {
-                                <option value="@value" selected="@(Model.Rules[index].Severity == value)">@value</option>
-                            }
-                        </select>
-                    </div>
-                    <div>
-                        <label for="Rules_@(index)__Title">Title</label>
-                        <input id="Rules_@(index)__Title" name="Rules[@index].Title" value="@Model.Rules[index].Title" />
-                    </div>
-                    <div>
-                        <label for="Rules_@(index)__SymbolKind">Symbol kind</label>
-                        <select id="Rules_@(index)__SymbolKind" name="Rules[@index].SymbolKind">
-                            @foreach (var value in Enum.GetValues<ZerberuzSymbolKind>())
-                            {
-                                <option value="@value" selected="@(Model.Rules[index].SymbolKind == value)">@value</option>
-                            }
-                        </select>
-                    </div>
-                    <div>
-                        <label for="Rules_@(index)__Message">Message</label>
-                        <input id="Rules_@(index)__Message" name="Rules[@index].Message" value="@Model.Rules[index].Message" />
+                        <label for="MinimumEngineVersion">Minimum engine</label>
+                        <input id="MinimumEngineVersion" name="MinimumEngineVersion" value="@Model.MinimumEngineVersion" placeholder="1.0.0" data-review="engine" />
                     </div>
                 </div>
+            </section>
 
-                <div class="form-grid">
-                    <div>
-                        <label for="Rules_@(index)__TargetNameMustMatch">Target name regex</label>
-                        <input id="Rules_@(index)__TargetNameMustMatch" name="Rules[@index].TargetNameMustMatch" value="@Model.Rules[index].TargetNameMustMatch" placeholder="^I[A-Z]" />
+            <section class="panel wizard-step" data-step="2">
+                <div class="panel-header">
+                    <strong>Rules</strong>
+                    <span class="muted">A rule describes what the analyzer should report.</span>
+                </div>
+                <p class="step-copy">Start with one diagnostic. Add more rules when the profile needs more conventions.</p>
+                <div class="rule-grid" id="rule-core-list">
+                    @for (var index = 0; index < Model.Rules.Count; index++)
+                    {
+                        <article class="rule-card">
+                            <div class="rule-header">
+                                <div>
+                                    <span class="pill">Rule @(index + 1)</span>
+                                    <div class="rule-title">Diagnostic</div>
+                                </div>
+                            </div>
+                            <div class="form-grid">
+                                <div>
+                                    <label for="Rules_@(index)__Id">Diagnostic id</label>
+                                    <input id="Rules_@(index)__Id" name="Rules[@index].Id" value="@Model.Rules[index].Id" placeholder="ZBZ001" data-rule-id />
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__Title">Title</label>
+                                    <input id="Rules_@(index)__Title" name="Rules[@index].Title" value="@Model.Rules[index].Title" data-rule-title />
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__Message">Message</label>
+                                    <input id="Rules_@(index)__Message" name="Rules[@index].Message" value="@Model.Rules[index].Message" />
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__Type">Rule type</label>
+                                    <select id="Rules_@(index)__Type" name="Rules[@index].Type">
+                                        @foreach (var value in Enum.GetValues<ZerberuzRuleType>().Where(value => value != ZerberuzRuleType.Unknown))
+                                        {
+                                            <option value="@value" selected="@(Model.Rules[index].Type == value)">@value</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__Severity">Severity</label>
+                                    <select id="Rules_@(index)__Severity" name="Rules[@index].Severity">
+                                        @foreach (var value in Enum.GetValues<ZerberuzDiagnosticSeverity>())
+                                        {
+                                            <option value="@value" selected="@(Model.Rules[index].Severity == value)">@value</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__SymbolKind">Symbol kind</label>
+                                    <select id="Rules_@(index)__SymbolKind" name="Rules[@index].SymbolKind">
+                                        @foreach (var value in Enum.GetValues<ZerberuzSymbolKind>())
+                                        {
+                                            <option value="@value" selected="@(Model.Rules[index].SymbolKind == value)">@value</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <details open>
+                                <summary>Condition</summary>
+                                <div class="form-grid">
+                                    <div>
+                                        <label for="Rules_@(index)__MustStartWith">Must start with</label>
+                                        <input id="Rules_@(index)__MustStartWith" name="Rules[@index].MustStartWith" value="@Model.Rules[index].MustStartWith" placeholder="I" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__MustEndWith">Must end with</label>
+                                        <input id="Rules_@(index)__MustEndWith" name="Rules[@index].MustEndWith" value="@Model.Rules[index].MustEndWith" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__MustContain">Must contain</label>
+                                        <input id="Rules_@(index)__MustContain" name="Rules[@index].MustContain" value="@Model.Rules[index].MustContain" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__MustMatch">Must match regex</label>
+                                        <input id="Rules_@(index)__MustMatch" name="Rules[@index].MustMatch" value="@Model.Rules[index].MustMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__MustNotMatch">Must not match regex</label>
+                                        <input id="Rules_@(index)__MustNotMatch" name="Rules[@index].MustNotMatch" value="@Model.Rules[index].MustNotMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__NamespaceMustContain">Namespace contains</label>
+                                        <input id="Rules_@(index)__NamespaceMustContain" name="Rules[@index].NamespaceMustContain" value="@Model.Rules[index].NamespaceMustContain" />
+                                    </div>
+                                </div>
+                            </details>
+                            <details>
+                                <summary>Target filters</summary>
+                                <div class="form-grid">
+                                    <div>
+                                        <label for="Rules_@(index)__TargetNameMustMatch">Target name regex</label>
+                                        <input id="Rules_@(index)__TargetNameMustMatch" name="Rules[@index].TargetNameMustMatch" value="@Model.Rules[index].TargetNameMustMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__TargetNamespaceMustMatch">Target namespace regex</label>
+                                        <input id="Rules_@(index)__TargetNamespaceMustMatch" name="Rules[@index].TargetNamespaceMustMatch" value="@Model.Rules[index].TargetNamespaceMustMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__TargetPathMustMatch">Target path regex</label>
+                                        <input id="Rules_@(index)__TargetPathMustMatch" name="Rules[@index].TargetPathMustMatch" value="@Model.Rules[index].TargetPathMustMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__PathMustMatch">Path must match</label>
+                                        <input id="Rules_@(index)__PathMustMatch" name="Rules[@index].PathMustMatch" value="@Model.Rules[index].PathMustMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__PathMustNotMatch">Path must not match</label>
+                                        <input id="Rules_@(index)__PathMustNotMatch" name="Rules[@index].PathMustNotMatch" value="@Model.Rules[index].PathMustNotMatch" />
+                                    </div>
+                                    <div>
+                                        <label for="Rules_@(index)__HelpUrl">Help URL</label>
+                                        <input id="Rules_@(index)__HelpUrl" name="Rules[@index].HelpUrl" value="@Model.Rules[index].HelpUrl" />
+                                    </div>
+                                </div>
+                            </details>
+                        </article>
+                    }
+                </div>
+                <div class="toolbar">
+                    <button class="button secondary" type="button" id="add-rule">Add Another Rule</button>
+                </div>
+            </section>
+
+            <section class="panel wizard-step" data-step="3">
+                <div class="panel-header">
+                    <strong>Help Content</strong>
+                    <span class="muted">Every diagnostic should explain the problem and the fix.</span>
+                </div>
+                <p class="step-copy">This content powers the diagnostic help endpoint and gives developers a clear next step.</p>
+                <div class="rule-grid" id="rule-help-list">
+                    @for (var index = 0; index < Model.Rules.Count; index++)
+                    {
+                        <article class="rule-card">
+                            <div class="rule-header">
+                                <div>
+                                    <span class="pill">@Model.Rules[index].Id</span>
+                                    <div class="rule-title">@Model.Rules[index].Title</div>
+                                </div>
+                            </div>
+                            <div class="form-grid two">
+                                <div>
+                                    <label for="Rules_@(index)__HelpSummary">Summary</label>
+                                    <textarea id="Rules_@(index)__HelpSummary" name="Rules[@index].HelpSummary">@Model.Rules[index].HelpSummary</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__HelpWhy">Why it matters</label>
+                                    <textarea id="Rules_@(index)__HelpWhy" name="Rules[@index].HelpWhy">@Model.Rules[index].HelpWhy</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__HelpTrigger">Trigger</label>
+                                    <textarea id="Rules_@(index)__HelpTrigger" name="Rules[@index].HelpTrigger">@Model.Rules[index].HelpTrigger</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__FixSteps">Fix steps</label>
+                                    <textarea id="Rules_@(index)__FixSteps" name="Rules[@index].FixSteps">@Model.Rules[index].FixSteps</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__BadExample">Bad example</label>
+                                    <textarea id="Rules_@(index)__BadExample" name="Rules[@index].BadExample">@Model.Rules[index].BadExample</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__GoodExample">Good example</label>
+                                    <textarea id="Rules_@(index)__GoodExample" name="Rules[@index].GoodExample">@Model.Rules[index].GoodExample</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__SuppressionGuidance">Suppression guidance</label>
+                                    <textarea id="Rules_@(index)__SuppressionGuidance" name="Rules[@index].SuppressionGuidance">@Model.Rules[index].SuppressionGuidance</textarea>
+                                </div>
+                                <div>
+                                    <label for="Rules_@(index)__RelatedDiagnostics">Related diagnostics</label>
+                                    <input id="Rules_@(index)__RelatedDiagnostics" name="Rules[@index].RelatedDiagnostics" value="@Model.Rules[index].RelatedDiagnostics" placeholder="ZBZ002, ZBZ003" />
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+
+            <section class="panel wizard-step" data-step="4">
+                <div class="panel-header">
+                    <strong>Review</strong>
+                    <span class="muted">Nothing is published until you click the button below.</span>
+                </div>
+                <div class="review-list">
+                    <div class="meta-box">
+                        <span>Profile</span>
+                        <strong data-review-output="profile">@Model.Profile</strong>
                     </div>
-                    <div>
-                        <label for="Rules_@(index)__TargetNamespaceMustMatch">Target namespace regex</label>
-                        <input id="Rules_@(index)__TargetNamespaceMustMatch" name="Rules[@index].TargetNamespaceMustMatch" value="@Model.Rules[index].TargetNamespaceMustMatch" />
+                    <div class="meta-box">
+                        <span>Rules version</span>
+                        <strong data-review-output="version">@Model.RulesVersion</strong>
                     </div>
-                    <div>
-                        <label for="Rules_@(index)__TargetPathMustMatch">Target path regex</label>
-                        <input id="Rules_@(index)__TargetPathMustMatch" name="Rules[@index].TargetPathMustMatch" value="@Model.Rules[index].TargetPathMustMatch" />
+                    <div class="meta-box">
+                        <span>Minimum engine</span>
+                        <strong data-review-output="engine">@Model.MinimumEngineVersion</strong>
                     </div>
-                    <div>
-                        <label for="Rules_@(index)__MustStartWith">Must start with</label>
-                        <input id="Rules_@(index)__MustStartWith" name="Rules[@index].MustStartWith" value="@Model.Rules[index].MustStartWith" placeholder="I" />
-                    </div>
-                    <div>
-                        <label for="Rules_@(index)__MustEndWith">Must end with</label>
-                        <input id="Rules_@(index)__MustEndWith" name="Rules[@index].MustEndWith" value="@Model.Rules[index].MustEndWith" />
-                    </div>
-                    <div>
-                        <label for="Rules_@(index)__NamespaceMustContain">Namespace must contain</label>
-                        <input id="Rules_@(index)__NamespaceMustContain" name="Rules[@index].NamespaceMustContain" value="@Model.Rules[index].NamespaceMustContain" />
+                    <div class="meta-box">
+                        <span>Rules to publish</span>
+                        <strong data-review-output="rules">@Model.Rules.Count rule(s)</strong>
                     </div>
                 </div>
+            </section>
 
-                <details>
-                    <summary>More conditions</summary>
-                    <div class="form-grid">
-                        <div>
-                            <label for="Rules_@(index)__MustContain">Must contain</label>
-                            <input id="Rules_@(index)__MustContain" name="Rules[@index].MustContain" value="@Model.Rules[index].MustContain" />
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__MustMatch">Must match regex</label>
-                            <input id="Rules_@(index)__MustMatch" name="Rules[@index].MustMatch" value="@Model.Rules[index].MustMatch" />
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__MustNotMatch">Must not match regex</label>
-                            <input id="Rules_@(index)__MustNotMatch" name="Rules[@index].MustNotMatch" value="@Model.Rules[index].MustNotMatch" />
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__PathMustMatch">Path must match</label>
-                            <input id="Rules_@(index)__PathMustMatch" name="Rules[@index].PathMustMatch" value="@Model.Rules[index].PathMustMatch" />
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__PathMustNotMatch">Path must not match</label>
-                            <input id="Rules_@(index)__PathMustNotMatch" name="Rules[@index].PathMustNotMatch" value="@Model.Rules[index].PathMustNotMatch" />
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__HelpUrl">Help URL</label>
-                            <input id="Rules_@(index)__HelpUrl" name="Rules[@index].HelpUrl" value="@Model.Rules[index].HelpUrl" />
-                        </div>
-                    </div>
-                </details>
-
-                <details open>
-                    <summary>Help content</summary>
-                    <div class="form-grid two">
-                        <div>
-                            <label for="Rules_@(index)__HelpSummary">Summary</label>
-                            <textarea id="Rules_@(index)__HelpSummary" name="Rules[@index].HelpSummary">@Model.Rules[index].HelpSummary</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__HelpWhy">Why it matters</label>
-                            <textarea id="Rules_@(index)__HelpWhy" name="Rules[@index].HelpWhy">@Model.Rules[index].HelpWhy</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__HelpTrigger">Trigger</label>
-                            <textarea id="Rules_@(index)__HelpTrigger" name="Rules[@index].HelpTrigger">@Model.Rules[index].HelpTrigger</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__FixSteps">Fix steps</label>
-                            <textarea id="Rules_@(index)__FixSteps" name="Rules[@index].FixSteps">@Model.Rules[index].FixSteps</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__BadExample">Bad example</label>
-                            <textarea id="Rules_@(index)__BadExample" name="Rules[@index].BadExample">@Model.Rules[index].BadExample</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__GoodExample">Good example</label>
-                            <textarea id="Rules_@(index)__GoodExample" name="Rules[@index].GoodExample">@Model.Rules[index].GoodExample</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__SuppressionGuidance">Suppression guidance</label>
-                            <textarea id="Rules_@(index)__SuppressionGuidance" name="Rules[@index].SuppressionGuidance">@Model.Rules[index].SuppressionGuidance</textarea>
-                        </div>
-                        <div>
-                            <label for="Rules_@(index)__RelatedDiagnostics">Related diagnostics</label>
-                            <input id="Rules_@(index)__RelatedDiagnostics" name="Rules[@index].RelatedDiagnostics" value="@Model.Rules[index].RelatedDiagnostics" placeholder="ZBZ002, ZBZ003" />
-                        </div>
-                    </div>
-                </details>
-            </article>
-        }
-    </section>
-
-    <div class="toolbar">
-        <button class="button secondary" type="button" id="add-rule">Add rule</button>
-        <button class="button warn" type="submit" name="PublishMode" value="guided">Publish version</button>
-        <a class="button secondary" href="/zerberuz">Cancel</a>
-    </div>
-
-    <section class="panel">
-        <details>
-            <summary>Advanced JSON</summary>
-            <div class="form-grid">
-                <div>
-                    <label for="RuleSetJson">Ruleset JSON</label>
-                    <textarea class="json-template" id="RuleSetJson" name="RuleSetJson" spellcheck="false">@Model.RuleSetJson</textarea>
-                </div>
-            </div>
             <div class="toolbar">
-                <button class="button secondary" type="submit" name="PublishMode" value="advanced">Publish JSON</button>
+                <button class="button secondary" type="button" id="back-step" style="display: none;">Back</button>
+                <button class="button" type="button" id="next-step">Continue</button>
+                <button class="button warn" type="submit" id="publish-step" style="display: none;">Publish Version</button>
+                <a class="button secondary" href="/zerberuz">Cancel</a>
             </div>
-        </details>
-    </section>
+        </div>
+    </div>
 </form>
 
-<template id="rule-template">
+<template id="rule-core-template">
     <article class="rule-card">
-        <div class="rule-header">
-            <div>
-                <span class="pill">New rule</span>
-                <div class="rule-title">Diagnostic and Condition</div>
-            </div>
-            <span class="pill amber">Required help</span>
-        </div>
+        <div class="rule-header"><div><span class="pill">New rule</span><div class="rule-title">Diagnostic</div></div></div>
         <div class="form-grid">
-            <div><label>Diagnostic id</label><input name="Rules[__index__].Id" placeholder="ZBZ002" /></div>
+            <div><label>Diagnostic id</label><input name="Rules[__index__].Id" placeholder="ZBZ002" data-rule-id /></div>
+            <div><label>Title</label><input name="Rules[__index__].Title" data-rule-title /></div>
+            <div><label>Message</label><input name="Rules[__index__].Message" /></div>
             <div><label>Rule type</label><select name="Rules[__index__].Type"><option>Naming</option><option>FolderStructure</option><option>NamespaceStructure</option><option>ArchitectureBoundary</option><option>Dependency</option></select></div>
             <div><label>Severity</label><select name="Rules[__index__].Severity"><option>Warning</option><option>Error</option><option>Info</option><option>Suggestion</option><option>Hidden</option></select></div>
-            <div><label>Title</label><input name="Rules[__index__].Title" /></div>
             <div><label>Symbol kind</label><select name="Rules[__index__].SymbolKind"><option>NamedType</option><option>Class</option><option>Interface</option><option>Struct</option><option>Enum</option><option>Method</option><option>Property</option><option>Field</option><option>Parameter</option><option>Namespace</option></select></div>
-            <div><label>Message</label><input name="Rules[__index__].Message" /></div>
         </div>
-        <div class="form-grid">
-            <div><label>Target name regex</label><input name="Rules[__index__].TargetNameMustMatch" /></div>
-            <div><label>Target namespace regex</label><input name="Rules[__index__].TargetNamespaceMustMatch" /></div>
-            <div><label>Target path regex</label><input name="Rules[__index__].TargetPathMustMatch" /></div>
+        <details open><summary>Condition</summary><div class="form-grid">
             <div><label>Must start with</label><input name="Rules[__index__].MustStartWith" /></div>
             <div><label>Must end with</label><input name="Rules[__index__].MustEndWith" /></div>
-            <div><label>Namespace must contain</label><input name="Rules[__index__].NamespaceMustContain" /></div>
-        </div>
-        <details><summary>More conditions</summary><div class="form-grid">
             <div><label>Must contain</label><input name="Rules[__index__].MustContain" /></div>
             <div><label>Must match regex</label><input name="Rules[__index__].MustMatch" /></div>
             <div><label>Must not match regex</label><input name="Rules[__index__].MustNotMatch" /></div>
+            <div><label>Namespace contains</label><input name="Rules[__index__].NamespaceMustContain" /></div>
+        </div></details>
+        <details><summary>Target filters</summary><div class="form-grid">
+            <div><label>Target name regex</label><input name="Rules[__index__].TargetNameMustMatch" /></div>
+            <div><label>Target namespace regex</label><input name="Rules[__index__].TargetNamespaceMustMatch" /></div>
+            <div><label>Target path regex</label><input name="Rules[__index__].TargetPathMustMatch" /></div>
             <div><label>Path must match</label><input name="Rules[__index__].PathMustMatch" /></div>
             <div><label>Path must not match</label><input name="Rules[__index__].PathMustNotMatch" /></div>
             <div><label>Help URL</label><input name="Rules[__index__].HelpUrl" /></div>
         </div></details>
-        <details open><summary>Help content</summary><div class="form-grid two">
+    </article>
+</template>
+
+<template id="rule-help-template">
+    <article class="rule-card">
+        <div class="rule-header"><div><span class="pill">New rule</span><div class="rule-title">Help content</div></div></div>
+        <div class="form-grid two">
             <div><label>Summary</label><textarea name="Rules[__index__].HelpSummary"></textarea></div>
             <div><label>Why it matters</label><textarea name="Rules[__index__].HelpWhy"></textarea></div>
             <div><label>Trigger</label><textarea name="Rules[__index__].HelpTrigger"></textarea></div>
@@ -258,17 +320,49 @@
             <div><label>Good example</label><textarea name="Rules[__index__].GoodExample"></textarea></div>
             <div><label>Suppression guidance</label><textarea name="Rules[__index__].SuppressionGuidance"></textarea></div>
             <div><label>Related diagnostics</label><input name="Rules[__index__].RelatedDiagnostics" /></div>
-        </div></details>
+        </div>
     </article>
 </template>
 
 <script>
-    const rules = document.getElementById('rules');
-    const template = document.getElementById('rule-template');
+    const steps = [...document.querySelectorAll('[data-step]')];
+    const indicators = [...document.querySelectorAll('[data-step-indicator]')];
+    const back = document.getElementById('back-step');
+    const next = document.getElementById('next-step');
+    const publish = document.getElementById('publish-step');
     const addRule = document.getElementById('add-rule');
+    const coreList = document.getElementById('rule-core-list');
+    const helpList = document.getElementById('rule-help-list');
+    const coreTemplate = document.getElementById('rule-core-template');
+    const helpTemplate = document.getElementById('rule-help-template');
+    let currentStep = 1;
+
+    function setStep(step) {
+        currentStep = Math.max(1, Math.min(4, step));
+        steps.forEach(panel => panel.classList.toggle('active', Number(panel.dataset.step) === currentStep));
+        indicators.forEach(item => item.classList.toggle('active', Number(item.dataset.stepIndicator) === currentStep));
+        back.style.display = currentStep === 1 ? 'none' : '';
+        next.style.display = currentStep === 4 ? 'none' : '';
+        publish.style.display = currentStep === 4 ? '' : 'none';
+        updateReview();
+    }
+
+    function updateReview() {
+        document.querySelector('[data-review-output="profile"]').textContent = document.getElementById('Profile').value || 'Not set';
+        document.querySelector('[data-review-output="version"]').textContent = document.getElementById('RulesVersion').value || 'Not set';
+        document.querySelector('[data-review-output="engine"]').textContent = document.getElementById('MinimumEngineVersion').value || 'Not set';
+        document.querySelector('[data-review-output="rules"]').textContent = `${coreList.querySelectorAll('.rule-card').length} rule(s)`;
+    }
 
     addRule?.addEventListener('click', () => {
-        const index = rules.querySelectorAll('.rule-card').length;
-        rules.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__index__', index));
+        const index = coreList.querySelectorAll('.rule-card').length;
+        coreList.insertAdjacentHTML('beforeend', coreTemplate.innerHTML.replaceAll('__index__', index));
+        helpList.insertAdjacentHTML('beforeend', helpTemplate.innerHTML.replaceAll('__index__', index));
+        updateReview();
     });
+
+    next?.addEventListener('click', () => setStep(currentStep + 1));
+    back?.addEventListener('click', () => setStep(currentStep - 1));
+    document.getElementById('profile-version-form')?.addEventListener('input', updateReview);
+    setStep(1);
 </script>

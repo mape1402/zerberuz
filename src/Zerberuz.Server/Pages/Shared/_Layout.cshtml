@@ -309,6 +309,62 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .wizard {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        .stepper {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+            list-style: none;
+            margin: 0;
+            padding: 8px;
+        }
+
+        .stepper li {
+            border-radius: 8px;
+            color: var(--muted);
+            padding: 12px;
+        }
+
+        .stepper li.active {
+            background: var(--cyan-soft);
+            color: var(--ink);
+        }
+
+        .stepper strong {
+            display: block;
+        }
+
+        .stepper span {
+            display: block;
+            font-size: 13px;
+            margin-top: 3px;
+        }
+
+        .wizard-step {
+            display: none;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        .step-copy {
+            color: var(--muted);
+            margin: 0;
+            padding: 0 16px 16px;
+        }
+
+        .review-list {
+            display: grid;
+            gap: 10px;
+            padding: 16px;
+        }
+
         label {
             color: var(--muted);
             display: block;
@@ -480,7 +536,7 @@
                 flex-direction: column;
             }
 
-            .stats, .form-shell, .workflow, .rule-meta, .form-grid, .form-grid.two {
+            .stats, .form-shell, .workflow, .rule-meta, .form-grid, .form-grid.two, .wizard {
                 grid-template-columns: 1fr;
             }
         }
@@ -492,7 +548,7 @@
             <a class="brand" href="/zerberuz"><span class="brand-mark">Z</span><span>Zerberuz Admin</span></a>
             <span class="nav-links">
                 <a class="nav-link" href="/zerberuz">Profiles</a>
-                <a class="nav-link" href="/zerberuz/publish">Publish</a>
+                <a class="nav-link" href="/zerberuz/publish">New Version</a>
             </span>
         </nav>
     </header>

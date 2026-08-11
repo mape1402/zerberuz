@@ -46,8 +46,12 @@ public sealed class AdminUiPageTests : IClassFixture<WebApplicationFactory<Progr
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Create Profile Version", html);
-        Assert.Contains("RuleSetJson", html);
-        Assert.Contains("Add rule", html);
+        Assert.Contains("New Profile Version", html);
+        Assert.Contains("1. Profile", html);
+        Assert.Contains("2. Rules", html);
+        Assert.Contains("3. Help", html);
+        Assert.Contains("4. Review", html);
+        Assert.Contains("Add Another Rule", html);
+        Assert.Contains("Publish Version", html);
     }
 }

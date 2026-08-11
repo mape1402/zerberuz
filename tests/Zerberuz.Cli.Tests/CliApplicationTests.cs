@@ -435,6 +435,58 @@ public sealed class CliApplicationTests
         Assert.Contains("Rule cache was not found", error.ToString());
     }
 
+    [Fact]
+    public void Run_rules_validate_accepts_valid_rule_set()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var exitCode = new CliApplication().Run(
+            new[] { "rules", "validate", "rules.json" },
+            output,
+            error,
+            _ => true,
+            _ => ValidRuleSet);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Valid rule set: backend@2026.08.11", output.ToString());
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public void Run_rules_publish_posts_rule_set_to_server()
+    {
+        var posted = new Dictionary<string, string>(StringComparer.Ordinal);
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var exitCode = new CliApplication().Run(
+            new[] { "rules", "publish", "rules.json", "--server", "http://zerberuz.test" },
+            output,
+            error,
+            _ => true,
+            _ => ValidRuleSet,
+            postJson: (url, payload) =>
+            {
+                posted[url] = payload;
+                return $$"""
+                {
+                  "profile": "backend",
+                  "rulesVersion": "2026.08.11",
+                  "schemaVersion": "1.0",
+                  "minimumEngineVersion": "",
+                  "sha256": "abc123",
+                  "ruleSet": {{payload}}
+                }
+                """;
+            });
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Published backend@2026.08.11", output.ToString());
+        Assert.Contains("Sha256: abc123", output.ToString());
+        Assert.True(posted.ContainsKey("http://zerberuz.test/api/v1/profiles/backend/versions"));
+        Assert.Contains("\"rulesVersion\":\"2026.08.11\"", posted.Values.Single());
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "zerberuz-tests-" + Guid.NewGuid().ToString("N"));

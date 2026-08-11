@@ -10,6 +10,7 @@ public sealed class CliApplication
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true
     };
 
@@ -36,6 +37,7 @@ public sealed class CliApplication
         Func<string, string> readAllText,
         Action<string, string>? writeAllText = null,
         Func<string, string>? readSource = null,
+        Func<string, string, string>? postJson = null,
         Func<ZerberuzProjectConfiguration, SharedRuleCachePaths>? resolveCachePaths = null)
     {
         if (args.Length == 0)
@@ -48,6 +50,12 @@ public sealed class CliApplication
         {
             "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
             "config" => Config(args.Skip(1).ToArray(), output, error),
+            "rules" => Rules(
+                args.Skip(1).ToArray(),
+                output,
+                error,
+                readAllText,
+                postJson ?? PostJson),
             "sync-rules" => SyncRules(
                 args.Skip(1).ToArray(),
                 output,
@@ -166,6 +174,99 @@ public sealed class CliApplication
         }
 
         output.Write(File.ReadAllText(configPath));
+        return 0;
+    }
+
+    private static int Rules(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<string, string> readAllText,
+        Func<string, string, string> postJson)
+    {
+        if (args.Length == 0)
+        {
+            error.WriteLine("Rules command is required.");
+            error.WriteLine("Usage: zerberuz rules <validate|publish>");
+            return 14;
+        }
+
+        return args[0] switch
+        {
+            "validate" => RulesValidate(args.Skip(1).ToArray(), output, error, readAllText),
+            "publish" => RulesPublish(args.Skip(1).ToArray(), output, error, readAllText, postJson),
+            _ => WriteUnknownCommand("rules " + args[0], error)
+        };
+    }
+
+    private static int RulesValidate(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<string, string> readAllText)
+    {
+        if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+        {
+            error.WriteLine("Rule file path is required.");
+            error.WriteLine("Usage: zerberuz rules validate <rules.json>");
+            return 15;
+        }
+
+        var ruleSet = ReadRuleSetPayload(readAllText(args[0]));
+        var validation = new RuleSetValidator().Validate(ruleSet);
+        if (!validation.IsValid)
+        {
+            WriteValidationErrors(validation, error);
+            return 8;
+        }
+
+        output.WriteLine($"Valid rule set: {ruleSet!.Profile}@{ruleSet.RulesVersion}");
+        return 0;
+    }
+
+    private static int RulesPublish(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<string, string> readAllText,
+        Func<string, string, string> postJson)
+    {
+        if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+        {
+            error.WriteLine("Rule file path is required.");
+            error.WriteLine("Usage: zerberuz rules publish <rules.json> --server <url>");
+            return 15;
+        }
+
+        var server = ResolveOption(args, "--server");
+        if (string.IsNullOrWhiteSpace(server))
+        {
+            error.WriteLine("Server URL is required.");
+            error.WriteLine("Usage: zerberuz rules publish <rules.json> --server <url>");
+            return 16;
+        }
+
+        var ruleSet = ReadRuleSetPayload(readAllText(args[0]));
+        var validation = new RuleSetValidator().Validate(ruleSet);
+        if (!validation.IsValid)
+        {
+            WriteValidationErrors(validation, error);
+            return 8;
+        }
+
+        var payload = JsonSerializer.Serialize(ruleSet, JsonOptions);
+        var endpoint = server.TrimEnd('/') +
+            $"/api/v1/profiles/{Uri.EscapeDataString(ruleSet!.Profile)}/versions";
+        var responsePayload = postJson(endpoint, payload);
+        var response = JsonSerializer.Deserialize<RuleProfileResponse>(responsePayload, JsonOptions);
+        if (response is null)
+        {
+            error.WriteLine("Server returned an empty publish response.");
+            return 17;
+        }
+
+        output.WriteLine($"Published {response.Profile}@{response.RulesVersion}");
+        output.WriteLine($"Sha256: {response.Sha256}");
         return 0;
     }
 
@@ -330,6 +431,16 @@ public sealed class CliApplication
         }
 
         return File.ReadAllText(source);
+    }
+
+    private static string PostJson(string url, string payload)
+    {
+        using var client = new HttpClient();
+        using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+        var response = client.PostAsync(url, content).GetAwaiter().GetResult();
+        var responsePayload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        response.EnsureSuccessStatusCode();
+        return responsePayload;
     }
 
     private static int Explain(
@@ -612,6 +723,8 @@ public sealed class CliApplication
         output.WriteLine("  zerberuz config path");
         output.WriteLine("  zerberuz config init [--team default] [--profile default] [--server <url>] [--version latest-compatible] [--force]");
         output.WriteLine("  zerberuz config show");
+        output.WriteLine("  zerberuz rules validate <rules.json>");
+        output.WriteLine("  zerberuz rules publish <rules.json> --server <url>");
         output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz sync-rules --server <url> --profile <name> [--version latest-compatible]");
         output.WriteLine("  zerberuz doctor [--config-path zerberuz.json]");

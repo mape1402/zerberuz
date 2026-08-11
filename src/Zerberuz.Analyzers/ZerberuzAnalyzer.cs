@@ -11,6 +11,7 @@ namespace Zerberuz.Analyzers;
 public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
 {
     public const string InterfaceNamingDiagnosticId = "ZBZ001";
+    public const string FolderStructureDiagnosticId = "ZBZ100";
 
     private static readonly DiagnosticDescriptor InterfaceNamingDescriptor = new(
         InterfaceNamingDiagnosticId,
@@ -22,8 +23,18 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
         description: "Interfaces must follow the naming convention declared in the Zerberuz rule cache.",
         helpLinkUri: "https://docs.zerberuz.dev/diagnostics/ZBZ001");
 
+    private static readonly DiagnosticDescriptor FolderStructureDescriptor = new(
+        FolderStructureDiagnosticId,
+        "Types must follow the configured folder structure",
+        "Type '{0}' must follow the configured folder structure",
+        "FolderStructure",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Types must be placed in folders declared by the Zerberuz rule cache.",
+        helpLinkUri: "https://docs.zerberuz.dev/diagnostics/ZBZ100");
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
-        ImmutableArray.Create(InterfaceNamingDescriptor);
+        ImmutableArray.Create(InterfaceNamingDescriptor, FolderStructureDescriptor);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -34,21 +45,34 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
         {
             var ruleSet = LoadRuleSet(startContext.Options, startContext.CancellationToken);
             var namingRules = NamingRuleState.Create(ruleSet);
-            if (namingRules.Count == 0)
+            var folderRules = FolderStructureRuleState.Create(ruleSet);
+            if (namingRules.Count == 0 && folderRules.Count == 0)
             {
                 return;
             }
 
             startContext.RegisterSymbolAction(
-                symbolContext => AnalyzeNamedType(symbolContext, namingRules),
+                symbolContext => AnalyzeNamedType(symbolContext, namingRules, folderRules),
                 SymbolKind.NamedType);
         });
     }
 
-    private static void AnalyzeNamedType(SymbolAnalysisContext context, IReadOnlyCollection<NamingRuleState> rules)
+    private static void AnalyzeNamedType(
+        SymbolAnalysisContext context,
+        IReadOnlyCollection<NamingRuleState> namingRules,
+        IReadOnlyCollection<FolderStructureRuleState> folderRules)
     {
         var namedType = (INamedTypeSymbol)context.Symbol;
-        if (namedType.TypeKind != TypeKind.Interface)
+        AnalyzeInterfaceNaming(context, namedType, namingRules);
+        AnalyzeFolderStructure(context, namedType, folderRules);
+    }
+
+    private static void AnalyzeInterfaceNaming(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol namedType,
+        IReadOnlyCollection<NamingRuleState> rules)
+    {
+        if (namedType.TypeKind != TypeKind.Interface || rules.Count == 0)
         {
             return;
         }
@@ -70,6 +94,38 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
                 location,
                 namedType.Name,
                 message));
+        }
+    }
+
+    private static void AnalyzeFolderStructure(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol namedType,
+        IReadOnlyCollection<FolderStructureRuleState> rules)
+    {
+        if (namedType.TypeKind != TypeKind.Class || rules.Count == 0)
+        {
+            return;
+        }
+
+        var location = namedType.Locations.FirstOrDefault(candidate => candidate.IsInSource);
+        var sourcePath = location?.SourceTree?.FilePath;
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return;
+        }
+
+        var checkedSourcePath = sourcePath!;
+        foreach (var rule in rules)
+        {
+            if (rule.IsMatch(namedType.Name, checkedSourcePath))
+            {
+                continue;
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                FolderStructureDescriptor,
+                location,
+                namedType.Name));
         }
     }
 
@@ -153,6 +209,95 @@ public sealed class ZerberuzAnalyzer : DiagnosticAnalyzer
                 pattern,
                 RegexOptions.CultureInvariant,
                 TimeSpan.FromMilliseconds(100));
+        }
+    }
+
+    private sealed class FolderStructureRuleState
+    {
+        private FolderStructureRuleState(string? nameSuffix, Regex pathPattern)
+        {
+            NameSuffix = nameSuffix;
+            PathPattern = pathPattern;
+        }
+
+        private string? NameSuffix { get; }
+
+        private Regex PathPattern { get; }
+
+        public bool IsMatch(string name, string path)
+        {
+            if (!string.IsNullOrWhiteSpace(NameSuffix) &&
+                !name.EndsWith(NameSuffix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return PathPattern.IsMatch(NormalizePath(path));
+        }
+
+        public static IReadOnlyCollection<FolderStructureRuleState> Create(RuleSetDefinition? ruleSet)
+        {
+            if (ruleSet is null)
+            {
+                return Array.Empty<FolderStructureRuleState>();
+            }
+
+            return ruleSet.Rules
+                .Where(rule =>
+                    rule.Id == FolderStructureDiagnosticId &&
+                    rule.Type == ZerberuzRuleType.FolderStructure &&
+                    rule.Target.SymbolKind == ZerberuzSymbolKind.Class &&
+                    !string.IsNullOrWhiteSpace(rule.Condition.PathMustMatch))
+                .Select(Create)
+                .Where(rule => rule is not null)
+                .Cast<FolderStructureRuleState>()
+                .ToArray();
+        }
+
+        private static FolderStructureRuleState? Create(RuleDefinition rule)
+        {
+            if (string.IsNullOrWhiteSpace(rule.Condition.PathMustMatch))
+            {
+                return null;
+            }
+
+            var pathMustMatch = rule.Condition.PathMustMatch!;
+            return new FolderStructureRuleState(
+                ReadSuffix(rule.Target.NameMustMatch),
+                CreateGlobRegex(pathMustMatch));
+        }
+
+        private static string? ReadSuffix(string? pattern)
+        {
+            if (pattern is null || string.IsNullOrWhiteSpace(pattern))
+            {
+                return null;
+            }
+
+            if (!pattern.StartsWith(".*", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return pattern.Substring(2).TrimEnd('$');
+        }
+
+        private static Regex CreateGlobRegex(string glob)
+        {
+            var normalized = NormalizePath(glob);
+            var escaped = Regex.Escape(normalized)
+                .Replace("\\*\\*", ".*")
+                .Replace("\\*", "[^/]*");
+
+            return new Regex(
+                "^" + escaped + "$",
+                RegexOptions.CultureInvariant,
+                TimeSpan.FromMilliseconds(100));
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('\\', '/');
         }
     }
 }

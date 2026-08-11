@@ -1,5 +1,6 @@
 using Zerberuz.Analyzers.Configuration;
 using Zerberuz.Analyzers.Rules;
+using System.Text.Json;
 
 namespace Zerberuz.Cli;
 
@@ -32,6 +33,7 @@ public sealed class CliApplication
         return args[0] switch
         {
             "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
+            "sync-rules" => SyncRules(args.Skip(1).ToArray(), output, error),
             "explain" => Explain(args.Skip(1).ToArray(), output, error, fileExists, readAllText),
             "--help" or "-h" => WriteUsageAndReturn(output),
             _ => WriteUnknownCommand(args[0], error)
@@ -47,6 +49,7 @@ public sealed class CliApplication
     {
         var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
         var profile = ResolveOption(args, "--profile") ?? "default";
+        var team = ResolveOption(args, "--team") ?? "default";
 
         if (fileExists(configPath))
         {
@@ -56,16 +59,88 @@ public sealed class CliApplication
 
         writeAllText(configPath, $$"""
         {
+          "team": "{{team}}",
           "profile": "{{profile}}",
           "rulesVersion": "latest-compatible",
           "mode": "latest-compatible",
           "rulesEndpoint": "https://rules.zerberuz.dev",
-          "cachePath": ".zerberuz/rules-cache.json"
+          "cacheRoot": null
         }
         """);
 
         output.WriteLine($"Created {configPath}");
         return 0;
+    }
+
+    private static int SyncRules(string[] args, TextWriter output, TextWriter error)
+    {
+        var source = ResolveOption(args, "--source");
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            error.WriteLine("Rule source is required.");
+            error.WriteLine("Usage: zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
+            return 6;
+        }
+
+        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        if (!File.Exists(configPath))
+        {
+            error.WriteLine($"Configuration was not found: {configPath}");
+            return 7;
+        }
+
+        var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
+        var payload = ReadSource(source);
+        var ruleSet = new RuleSetCacheLoader().Load(payload);
+        var validation = new RuleSetValidator().Validate(ruleSet);
+        if (!validation.IsValid)
+        {
+            WriteValidationErrors(validation, error);
+            return 8;
+        }
+
+        var effectiveConfiguration = new ZerberuzProjectConfiguration
+        {
+            Team = configuration.Team,
+            Profile = configuration.Profile,
+            RulesVersion = ruleSet!.RulesVersion,
+            Mode = configuration.Mode,
+            RulesEndpoint = configuration.RulesEndpoint,
+            CacheRoot = configuration.CacheRoot
+        };
+
+        var paths = new SharedCachePathResolver().Resolve(
+            effectiveConfiguration,
+            ResolveOption(args, "--cache-root"));
+
+        AtomicWriteValidatedRuleSet(paths.RulesCachePath, payload);
+        AtomicWriteText(
+            paths.LatestCompatiblePointerPath,
+            JsonSerializer.Serialize(
+                new
+                {
+                    paths.Team,
+                    paths.Profile,
+                    paths.RulesVersion,
+                    paths.RulesCachePath
+                },
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        output.WriteLine($"Synced {paths.Team}/{paths.Profile}@{paths.RulesVersion}");
+        output.WriteLine($"Cache: {paths.RulesCachePath}");
+        return 0;
+    }
+
+    private static string ReadSource(string source)
+    {
+        if (Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            using var client = new HttpClient();
+            return client.GetStringAsync(uri).GetAwaiter().GetResult();
+        }
+
+        return File.ReadAllText(source);
     }
 
     private static int Explain(
@@ -103,6 +178,46 @@ public sealed class CliApplication
 
         WriteHelp(help, output);
         return 0;
+    }
+
+    private static void AtomicWriteValidatedRuleSet(string path, string content)
+    {
+        var parsed = new RuleSetCacheLoader().Load(content);
+        var validation = new RuleSetValidator().Validate(parsed);
+        if (!validation.IsValid)
+        {
+            throw new InvalidOperationException("Rule cache content failed validation before atomic write.");
+        }
+
+        AtomicWriteText(path, content);
+    }
+
+    private static void AtomicWriteText(string path, string content)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        File.WriteAllText(tempPath, content);
+
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+
+        File.Move(tempPath, path);
+    }
+
+    private static void WriteValidationErrors(RuleSetValidationResult validation, TextWriter error)
+    {
+        error.WriteLine("Rule source is invalid.");
+        foreach (var validationError in validation.Errors)
+        {
+            error.WriteLine($"{validationError.Code}: {validationError.Message}");
+        }
     }
 
     private static string? ResolveOption(string[] args, string name)
@@ -173,7 +288,8 @@ public sealed class CliApplication
         output.WriteLine("Zerberuz CLI");
         output.WriteLine();
         output.WriteLine("Usage:");
-        output.WriteLine("  zerberuz init [--profile default] [--config-path zerberuz.json]");
+        output.WriteLine("  zerberuz init [--team default] [--profile default] [--config-path zerberuz.json]");
+        output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
     }
 

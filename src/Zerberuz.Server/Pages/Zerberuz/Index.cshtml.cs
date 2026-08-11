@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Zerberuz.Analyzers.Rules;
 using Zerberuz.Server.Profiles;
 
 namespace Zerberuz.Server.Pages.Zerberuz;
@@ -26,9 +27,18 @@ public sealed class IndexModel : PageModel
         foreach (var profile in profiles)
         {
             var versions = await store.GetVersionsAsync(profile, cancellationToken).ConfigureAwait(false);
-            Profiles.Add(new ProfileSummary(profile, versions.ToArray()));
+            var versionList = versions.ToArray();
+            var currentVersion = versionList.FirstOrDefault();
+            var currentRuleSet = currentVersion is null
+                ? null
+                : await store.GetRuleSetAsync(profile, currentVersion, cancellationToken).ConfigureAwait(false);
+
+            Profiles.Add(new ProfileSummary(profile, versionList, currentRuleSet));
         }
     }
 
-    public sealed record ProfileSummary(string Name, IReadOnlyCollection<string> Versions);
+    public sealed record ProfileSummary(
+        string Name,
+        IReadOnlyCollection<string> Versions,
+        RuleSetDefinition? CurrentRuleSet);
 }

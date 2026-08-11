@@ -6,56 +6,99 @@
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Server Governance</p>
-        <h1>Rule Profiles</h1>
-        <p class="muted">Versioned analyzer policies published to this Zerberuz server.</p>
+        <p class="eyebrow">Zerberuz Server</p>
+        <h1>Perfiles de reglas</h1>
+        <p class="lead">Un perfil agrupa reglas por contexto, por ejemplo backend, frontend o contracts. Cada cambio se publica como una nueva version inmutable.</p>
     </div>
-    <a class="button warn" href="/zerberuz/publish">Publish profile</a>
+    <a class="button warn" href="/zerberuz/publish">Crear perfil o version</a>
 </div>
+
+<section class="workflow">
+    <div class="workflow-card">
+        <strong>1. Nombra el perfil</strong>
+        <span>El campo JSON <code>profile</code> crea el perfil si no existe.</span>
+    </div>
+    <div class="workflow-card">
+        <strong>2. Define reglas y ayuda</strong>
+        <span>Cada regla requiere su <code>id</code>, condicion y ayuda del diagnostico.</span>
+    </div>
+    <div class="workflow-card">
+        <strong>3. Publica una version</strong>
+        <span><code>rulesVersion</code> debe ser nuevo; las versiones anteriores quedan disponibles.</span>
+    </div>
+</section>
 
 <section class="stats">
     <div class="stat">
         <strong>@Model.ProfileCount</strong>
-        <span>Profiles</span>
+        <span>Perfiles</span>
     </div>
     <div class="stat">
         <strong>@Model.VersionCount</strong>
-        <span>Published versions</span>
+        <span>Versiones publicadas</span>
     </div>
     <div class="stat">
         <strong>@Model.LatestVersionCount</strong>
-        <span>Latest pointers</span>
+        <span>Perfiles activos</span>
     </div>
 </section>
 
 @if (Model.Profiles.Count == 0)
 {
     <div class="empty">
-        <strong>No rule profiles yet.</strong>
-        <p class="muted">Publish your first ruleset JSON to start serving analyzer policy.</p>
+        <strong>No hay perfiles todavia.</strong>
+        <p class="muted">Crea el primero publicando un ruleset JSON con <code>profile</code>, <code>rulesVersion</code>, <code>rules</code> y <code>help</code>.</p>
+        <div class="toolbar">
+            <a class="button warn" href="/zerberuz/publish">Crear primer perfil</a>
+        </div>
     </div>
 }
 else
 {
     <section class="panel">
         <div class="panel-header">
-            <strong>Published Profiles</strong>
-            <span class="muted">Click a version to inspect its rules.</span>
+            <strong>Perfiles publicados</strong>
+            <span class="muted">Abre la version actual para ver regla por regla.</span>
         </div>
         <table>
             <thead>
                 <tr>
-                    <th>Profile</th>
-                    <th>Versions</th>
+                    <th>Perfil</th>
+                    <th>Version actual</th>
+                    <th>Reglas</th>
+                    <th>Historial</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var profile in Model.Profiles)
                 {
+                    var currentVersion = profile.Versions.FirstOrDefault();
                     <tr>
                         <td>
-                            <strong>@profile.Name</strong><br />
-                            <span class="muted">@profile.Versions.Count version(s)</span>
+                            <span class="profile-name">@profile.Name</span><br />
+                            <span class="muted">Perfil de analizadores</span>
+                        </td>
+                        <td>
+                            @if (currentVersion is null)
+                            {
+                                <span class="muted">Sin versiones</span>
+                            }
+                            else
+                            {
+                                <a class="pill amber" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(currentVersion)">@currentVersion</a>
+                            }
+                        </td>
+                        <td>
+                            @if (profile.CurrentRuleSet is null)
+                            {
+                                <span class="muted">0 reglas</span>
+                            }
+                            else
+                            {
+                                <strong>@profile.CurrentRuleSet.Rules.Count</strong><br />
+                                <span class="muted">@profile.CurrentRuleSet.Help.Count ayudas</span>
+                            }
                         </td>
                         <td>
                             <span class="version-list">
@@ -63,6 +106,15 @@ else
                                 {
                                     <a class="pill" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(version)">@version</a>
                                 }
+                            </span>
+                        </td>
+                        <td>
+                            <span class="row-actions">
+                                @if (currentVersion is not null)
+                                {
+                                    <a class="button secondary" href="/zerberuz/profiles/@Uri.EscapeDataString(profile.Name)/versions/@Uri.EscapeDataString(currentVersion)">Ver reglas</a>
+                                }
+                                <a class="button secondary" href="/zerberuz/publish">Nueva version</a>
                             </span>
                         </td>
                     </tr>

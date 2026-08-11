@@ -6,9 +6,9 @@
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Ruleset Intake</p>
-        <h1>Publish Rule Profile</h1>
-        <p class="muted">Paste a validated Zerberuz ruleset. The server validates again and rejects duplicate profile/version pairs.</p>
+        <p class="eyebrow">Publicacion</p>
+        <h1>Crear perfil o nueva version</h1>
+        <p class="lead">Zerberuz publica reglas por version. Si el <code>profile</code> no existe se crea; si ya existe, se agrega una nueva <code>rulesVersion</code>.</p>
     </div>
 </div>
 
@@ -20,24 +20,30 @@
 <form method="post">
     @Html.AntiForgeryToken()
     <div class="form-shell">
-        <section class="panel">
-            <div class="panel-header">
-                <strong>Rule set JSON</strong>
-                <span class="muted">profile + rulesVersion must be unique</span>
-            </div>
-            <textarea id="RuleSetJson" name="RuleSetJson" spellcheck="false">@Model.RuleSetJson</textarea>
-        </section>
         <aside class="aside">
-            <strong>Before publishing</strong>
-            <ul class="muted">
-                <li>Use a new immutable rulesVersion.</li>
-                <li>Keep rules declarative; analyzer code stays packaged.</li>
-                <li>Add help for every diagnostic id.</li>
-            </ul>
+            <div class="workflow-card">
+                <strong>Perfil</strong>
+                <span><code>profile</code> separa configuraciones por equipo, app o capa.</span>
+            </div>
+            <div class="workflow-card">
+                <strong>Version</strong>
+                <span><code>rulesVersion</code> no se edita: publica una nueva cuando cambien reglas.</span>
+            </div>
+            <div class="workflow-card">
+                <strong>Reglas</strong>
+                <span><code>rules</code> define cada diagnostico; <code>help</code> debe tener el mismo id.</span>
+            </div>
             <div class="toolbar">
-                <button class="button warn" type="submit">Publish</button>
-                <a class="button secondary" href="/zerberuz">Cancel</a>
+                <button class="button warn" type="submit">Publicar</button>
+                <a class="button secondary" href="/zerberuz">Cancelar</a>
             </div>
         </aside>
+        <section class="panel">
+            <div class="panel-header">
+                <strong>Ruleset JSON</strong>
+                <span class="muted">profile + rulesVersion deben ser unicos</span>
+            </div>
+            <textarea class="json-template" id="RuleSetJson" name="RuleSetJson" spellcheck="false">@Model.RuleSetJson</textarea>
+        </section>
     </div>
 </form>

@@ -13,12 +13,12 @@ else
 {
     <div class="page-heading">
         <div>
-            <p class="eyebrow">Rule Profile</p>
+            <p class="eyebrow">Version de perfil</p>
             <h1>@Model.RuleSet.Profile</h1>
-            <p class="muted">Version <span class="pill amber">@Model.RuleSet.RulesVersion</span></p>
+            <p class="lead">Esta version contiene las reglas que descargan los analyzers para este perfil. Para cambiar algo, publica una nueva version.</p>
         </div>
         <div class="toolbar">
-            <a class="button secondary" href="/zerberuz">Back</a>
+            <a class="button secondary" href="/zerberuz">Volver</a>
             <a class="button" href="/api/v1/profiles/@Uri.EscapeDataString(Model.RuleSet.Profile)/versions/@Uri.EscapeDataString(Model.RuleSet.RulesVersion)">API JSON</a>
         </div>
     </div>
@@ -26,43 +26,90 @@ else
     <section class="stats">
         <div class="stat">
             <strong>@Model.RuleSet.Rules.Count</strong>
-            <span>Rules</span>
+            <span>Reglas</span>
         </div>
         <div class="stat">
             <strong>@Model.RuleSet.Help.Count</strong>
-            <span>Help topics</span>
+            <span>Ayudas</span>
         </div>
         <div class="stat">
-            <strong>@Model.RuleSet.SchemaVersion</strong>
-            <span>Schema</span>
+            <strong>@Model.RuleSet.RulesVersion</strong>
+            <span>Version</span>
         </div>
     </section>
 
     <section class="panel">
         <div class="panel-header">
-            <strong>Rules</strong>
+            <strong>Resumen tecnico</strong>
             <span class="muted">Minimum engine: @Model.RuleSet.MinimumEngineVersion</span>
         </div>
         <table>
-            <thead>
-                <tr>
-                    <th>Id</th>
-                    <th>Title</th>
-                    <th>Type</th>
-                    <th>Severity</th>
-                </tr>
-            </thead>
             <tbody>
-                @foreach (var rule in Model.RuleSet.Rules)
-                {
-                    <tr>
-                        <td><span class="pill">@rule.Id</span></td>
-                        <td>@rule.Title</td>
-                        <td>@rule.Type</td>
-                        <td>@rule.Severity</td>
-                    </tr>
-                }
+                <tr>
+                    <th>Schema</th>
+                    <td>@Model.RuleSet.SchemaVersion</td>
+                </tr>
+                <tr>
+                    <th>Profile</th>
+                    <td>@Model.RuleSet.Profile</td>
+                </tr>
+                <tr>
+                    <th>Rules version</th>
+                    <td>@Model.RuleSet.RulesVersion</td>
+                </tr>
             </tbody>
         </table>
+    </section>
+
+    <section class="rule-grid">
+        @foreach (var rule in Model.RuleSet.Rules)
+        {
+            <article class="rule-card">
+                <div class="rule-header">
+                    <div>
+                        <span class="pill">@rule.Id</span>
+                        <div class="rule-title">@rule.Title</div>
+                    </div>
+                    <span class="pill amber">@rule.Severity</span>
+                </div>
+
+                <div class="rule-meta">
+                    <div class="meta-box">
+                        <span>Tipo</span>
+                        <strong>@rule.Type</strong>
+                    </div>
+                    <div class="meta-box">
+                        <span>Objetivo</span>
+                        <code>@Model.GetTargetSummary(rule)</code>
+                    </div>
+                    <div class="meta-box">
+                        <span>Condicion</span>
+                        <code>@Model.GetConditionSummary(rule)</code>
+                    </div>
+                </div>
+
+                <div class="rule-meta">
+                    <div class="meta-box">
+                        <span>Mensaje</span>
+                        <strong>@rule.Message</strong>
+                    </div>
+                    <div class="meta-box">
+                        <span>Ayuda</span>
+                        <strong>@Model.GetHelpTitle(rule.Id)</strong>
+                    </div>
+                    <div class="meta-box">
+                        <span>Help URL</span>
+                        @if (string.IsNullOrWhiteSpace(rule.HelpUrl))
+                        {
+                            <strong>Server help endpoint</strong>
+                        }
+                        else
+                        {
+                            <a href="@rule.HelpUrl">@rule.HelpUrl</a>
+                        }
+                    </div>
+                </div>
+            </article>
+        }
     </section>
 }

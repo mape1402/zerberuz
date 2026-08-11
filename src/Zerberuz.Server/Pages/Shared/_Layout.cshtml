@@ -8,14 +8,17 @@
         :root {
             color-scheme: dark;
             --bg: #04070d;
+            --surface: #08111c;
             --panel: #0d1724;
+            --panel-2: #101c2a;
             --ink: #f8fbff;
             --muted: #8fa3b7;
+            --muted-2: #64788b;
             --line: #1f3347;
             --cyan: #08c8f6;
-            --cyan-soft: rgba(8, 200, 246, .15);
+            --cyan-soft: rgba(8, 200, 246, .1);
             --amber: #ff9f0a;
-            --amber-soft: rgba(255, 159, 10, .16);
+            --amber-soft: rgba(255, 159, 10, .11);
             --danger: #ff6b4a;
             --ok: #38d6a8;
         }
@@ -23,10 +26,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background:
-                radial-gradient(circle at 18% 8%, rgba(8, 200, 246, .14), transparent 32%),
-                radial-gradient(circle at 85% 18%, rgba(255, 159, 10, .12), transparent 28%),
-                linear-gradient(145deg, var(--bg), #07101a 58%, #030509);
+            background: var(--bg);
             color: var(--ink);
             font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
@@ -35,9 +35,8 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            border-bottom: 1px solid rgba(8, 200, 246, .22);
-            background: rgba(4, 7, 13, .82);
-            backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--line);
+            background: #050a12;
         }
 
         nav, main {
@@ -83,8 +82,7 @@
             place-items: center;
             border: 1px solid rgba(8, 200, 246, .55);
             border-radius: 8px;
-            background: linear-gradient(145deg, rgba(8, 200, 246, .2), rgba(255, 159, 10, .14));
-            box-shadow: 0 0 28px rgba(8, 200, 246, .2);
+            background: #071522;
             color: var(--cyan);
             font-weight: 950;
         }
@@ -103,7 +101,7 @@
 
         .nav-link:hover {
             border-color: rgba(8, 200, 246, .25);
-            background: rgba(8, 200, 246, .08);
+            background: var(--cyan-soft);
         }
 
         h1 {
@@ -135,6 +133,12 @@
             text-transform: uppercase;
         }
 
+        .lead {
+            color: var(--muted);
+            margin: 8px 0 0;
+            max-width: 720px;
+        }
+
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -145,8 +149,7 @@
         .button {
             border: 1px solid rgba(8, 200, 246, .7);
             border-radius: 8px;
-            background: linear-gradient(135deg, #08c8f6, #0d8de3);
-            box-shadow: 0 10px 28px rgba(8, 200, 246, .2);
+            background: var(--cyan);
             color: #001019;
             cursor: pointer;
             display: inline-block;
@@ -157,14 +160,12 @@
 
         .button.secondary {
             background: rgba(8, 200, 246, .08);
-            box-shadow: none;
             color: var(--cyan);
         }
 
         .button.warn {
             border-color: rgba(255, 159, 10, .76);
-            background: linear-gradient(135deg, #ffb52e, #ff8a00);
-            box-shadow: 0 10px 28px rgba(255, 159, 10, .18);
+            background: var(--amber);
             color: #190d00;
         }
 
@@ -175,11 +176,10 @@
             margin: 0 0 18px;
         }
 
-        .stat, .panel, .aside {
+        .stat, .panel, .aside, .workflow-card, .rule-card {
             border: 1px solid var(--line);
             border-radius: 8px;
-            background: linear-gradient(180deg, rgba(16, 31, 46, .94), rgba(8, 14, 24, .94));
-            box-shadow: 0 18px 60px rgba(0, 0, 0, .26);
+            background: var(--panel);
         }
 
         .stat {
@@ -272,7 +272,7 @@
             width: 100%;
             border: 1px solid var(--line);
             border-radius: 8px;
-            background: #08111c;
+            background: var(--surface);
             color: var(--ink);
             padding: 12px;
         }
@@ -290,7 +290,7 @@
 
         .form-shell {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 300px;
+            grid-template-columns: 320px minmax(0, 1fr);
             gap: 18px;
         }
 
@@ -301,6 +301,99 @@
         .aside ul {
             margin: 10px 0 0;
             padding-left: 18px;
+        }
+
+        .workflow {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin: 0 0 18px;
+        }
+
+        .workflow-card {
+            border-left: 3px solid var(--cyan);
+            padding: 14px;
+        }
+
+        .workflow-card strong {
+            display: block;
+        }
+
+        .workflow-card span {
+            color: var(--muted);
+            display: block;
+            margin-top: 5px;
+        }
+
+        .aside .workflow-card {
+            background: var(--surface);
+            margin-bottom: 12px;
+        }
+
+        .profile-name {
+            color: var(--ink);
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .rule-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .rule-card {
+            padding: 16px;
+        }
+
+        .rule-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .rule-title {
+            margin: 8px 0 0;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .rule-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .meta-box {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            padding: 10px;
+        }
+
+        .meta-box span {
+            color: var(--muted-2);
+            display: block;
+            font-size: 12px;
+            font-weight: 750;
+            text-transform: uppercase;
+        }
+
+        .meta-box strong, .meta-box code {
+            display: block;
+            margin-top: 4px;
+        }
+
+        .json-template {
+            min-height: 560px;
         }
 
         .message {
@@ -338,7 +431,7 @@
                 flex-direction: column;
             }
 
-            .stats, .form-shell {
+            .stats, .form-shell, .workflow, .rule-meta {
                 grid-template-columns: 1fr;
             }
         }

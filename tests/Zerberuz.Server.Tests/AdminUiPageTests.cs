@@ -19,7 +19,7 @@ public sealed class AdminUiPageTests : IClassFixture<WebApplicationFactory<Progr
 
         var html = await client.GetStringAsync("/zerberuz");
 
-        Assert.Contains("Rule Profiles", html);
+        Assert.Contains("Perfiles de reglas", html);
         Assert.Contains("backend", html);
         Assert.Contains("2026.08.11", html);
     }
@@ -46,7 +46,7 @@ public sealed class AdminUiPageTests : IClassFixture<WebApplicationFactory<Progr
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Publish Rule Profile", html);
+        Assert.Contains("Crear perfil o nueva version", html);
         Assert.Contains("RuleSetJson", html);
     }
 }

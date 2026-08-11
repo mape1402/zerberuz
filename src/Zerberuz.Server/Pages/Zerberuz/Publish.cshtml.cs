@@ -28,8 +28,40 @@ public sealed class PublishModel : PageModel
           "schemaVersion": "1.0",
           "rulesVersion": "2026.10.01",
           "profile": "backend",
-          "rules": [],
-          "help": []
+          "minimumEngineVersion": "1.0.0",
+          "rules": [
+            {
+              "id": "ZBZ001",
+              "type": "naming",
+              "title": "Interfaces must start with I",
+              "severity": "warning",
+              "target": {
+                "symbolKind": "namedType",
+                "nameMustMatch": "^I[A-Z]"
+              },
+              "condition": {
+                "mustStartWith": "I"
+              },
+              "message": "Interface names must start with I."
+            }
+          ],
+          "help": [
+            {
+              "diagnosticId": "ZBZ001",
+              "title": "Interfaces must start with I",
+              "summary": "Interfaces are easier to scan when they follow the team naming convention.",
+              "why": "Consistent names reduce friction during reviews and refactors.",
+              "trigger": "An interface name does not start with I.",
+              "badExample": "public interface CustomerRepository { }",
+              "goodExample": "public interface ICustomerRepository { }",
+              "fixSteps": [
+                "Rename the interface so it starts with I.",
+                "Update references."
+              ],
+              "suppressionGuidance": "Suppress only when external contracts force a different name.",
+              "relatedDiagnostics": []
+            }
+          ]
         }
         """;
     }

@@ -8,6 +8,7 @@
     <PackageTags>roslyn;analyzers;diagnostics;architecture;naming;code-quality;dotnet</PackageTags>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);RS1036;RS2008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

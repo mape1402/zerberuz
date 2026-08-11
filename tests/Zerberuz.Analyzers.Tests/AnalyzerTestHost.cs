@@ -11,6 +11,7 @@ public sealed class AnalyzerTestHost
         string source,
         DiagnosticAnalyzer analyzer,
         string filePath = "Test.cs",
+        IReadOnlyCollection<AdditionalText>? additionalFiles = null,
         CancellationToken cancellationToken = default)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, path: filePath, cancellationToken: cancellationToken);
@@ -22,7 +23,7 @@ public sealed class AnalyzerTestHost
 
         var compilationWithAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create(analyzer),
-            new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty));
+            new AnalyzerOptions((additionalFiles ?? Array.Empty<AdditionalText>()).ToImmutableArray()));
 
         var diagnostics = await compilationWithAnalyzers
             .GetAnalyzerDiagnosticsAsync(cancellationToken)

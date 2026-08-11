@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <ProjectReference Include="..\Zerberuz.Analyzers.Rules\Zerberuz.Analyzers.Rules.csproj" />
   </ItemGroup>
 </Project>

@@ -7,7 +7,9 @@ public static class ZerberuzDatabaseInitializer
 {
     private static readonly SemaphoreSlim InitializationLock = new(1, 1);
 
-    public static async Task InitializeAsync(IServiceProvider services)
+    public static async Task InitializeAsync(
+        IServiceProvider services,
+        bool seedDefaultProfiles = true)
     {
         await InitializationLock.WaitAsync().ConfigureAwait(false);
         try
@@ -16,7 +18,10 @@ public static class ZerberuzDatabaseInitializer
             var dbContext = scope.ServiceProvider.GetRequiredService<ZerberuzDbContext>();
 
             await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
-            await SeedProfileAsync(dbContext, ProfileSeedData.CreateBackendRuleSet()).ConfigureAwait(false);
+            if (seedDefaultProfiles)
+            {
+                await SeedProfileAsync(dbContext, ProfileSeedData.CreateBackendRuleSet()).ConfigureAwait(false);
+            }
         }
         finally
         {

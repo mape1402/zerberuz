@@ -20,7 +20,8 @@ public sealed class CliApplication
         TextWriter output,
         TextWriter error,
         Func<string, bool> fileExists,
-        Func<string, string> readAllText)
+        Func<string, string> readAllText,
+        Action<string, string>? writeAllText = null)
     {
         if (args.Length == 0)
         {
@@ -30,10 +31,41 @@ public sealed class CliApplication
 
         return args[0] switch
         {
+            "init" => Init(args.Skip(1).ToArray(), output, error, fileExists, writeAllText ?? File.WriteAllText),
             "explain" => Explain(args.Skip(1).ToArray(), output, error, fileExists, readAllText),
             "--help" or "-h" => WriteUsageAndReturn(output),
             _ => WriteUnknownCommand(args[0], error)
         };
+    }
+
+    private static int Init(
+        string[] args,
+        TextWriter output,
+        TextWriter error,
+        Func<string, bool> fileExists,
+        Action<string, string> writeAllText)
+    {
+        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        var profile = ResolveOption(args, "--profile") ?? "default";
+
+        if (fileExists(configPath))
+        {
+            error.WriteLine($"Configuration already exists: {configPath}");
+            return 5;
+        }
+
+        writeAllText(configPath, $$"""
+        {
+          "profile": "{{profile}}",
+          "rulesVersion": "latest-compatible",
+          "mode": "latest-compatible",
+          "rulesEndpoint": "https://rules.zerberuz.dev",
+          "cachePath": ".zerberuz/rules-cache.json"
+        }
+        """);
+
+        output.WriteLine($"Created {configPath}");
+        return 0;
     }
 
     private static int Explain(
@@ -141,6 +173,7 @@ public sealed class CliApplication
         output.WriteLine("Zerberuz CLI");
         output.WriteLine();
         output.WriteLine("Usage:");
+        output.WriteLine("  zerberuz init [--profile default] [--config-path zerberuz.json]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
     }
 

@@ -5,6 +5,43 @@ namespace Zerberuz.Cli.Tests;
 public sealed class CliApplicationTests
 {
     [Fact]
+    public void Run_init_creates_default_configuration()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var writes = new Dictionary<string, string>(StringComparer.Ordinal);
+        var exitCode = new CliApplication().Run(
+            new[] { "init", "--profile", "backend-clean-architecture" },
+            output,
+            error,
+            path => writes.ContainsKey(path),
+            _ => string.Empty,
+            (path, content) => writes[path] = content);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Created zerberuz.json", output.ToString());
+        Assert.Contains("backend-clean-architecture", writes["zerberuz.json"]);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public void Run_init_returns_error_when_configuration_exists()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var exitCode = new CliApplication().Run(
+            new[] { "init" },
+            output,
+            error,
+            path => path == "zerberuz.json",
+            _ => string.Empty,
+            (_, _) => { });
+
+        Assert.Equal(5, exitCode);
+        Assert.Contains("Configuration already exists", error.ToString());
+    }
+
+    [Fact]
     public void Run_explain_renders_cached_help()
     {
         var output = new StringWriter();

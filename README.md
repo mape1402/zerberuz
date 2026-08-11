@@ -1,0 +1,121 @@
+# Zerberuz
+
+[![Build](https://github.com/mape1402/zerberuz/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/mape1402/zerberuz/actions/workflows/build-and-release.yml)
+[![NuGet](https://img.shields.io/nuget/v/Zerberuz.Analyzers.svg)](https://www.nuget.org/packages/Zerberuz.Analyzers)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**Zerberuz** is a configurable Roslyn analyzer platform for .NET teams. It installs as a stable analyzer engine and applies versioned rule definitions for naming conventions, folder structure, namespace layout, architecture boundaries, and dependency governance.
+
+The analyzer is designed to be fast and deterministic: it reads local, validated rule caches during IDE/build analysis. Remote synchronization is handled by the CLI and server, not by analyzer hot paths.
+
+## Packages
+
+```bash
+dotnet add package Zerberuz.Analyzers
+```
+
+Planned supporting packages:
+
+```bash
+dotnet tool install --global Zerberuz.Cli
+dotnet add package Zerberuz.Server.Contracts
+```
+
+| Package | Purpose |
+| --- | --- |
+| `Zerberuz.Analyzers` | Roslyn analyzer package installed by consuming projects. |
+| `Zerberuz.Cli` | Rule sync, cache validation, diagnostics explanation, and CI tooling. |
+| `Zerberuz.Server.Contracts` | Shared contracts for rule payloads and diagnostic help. |
+| `Zerberuz.Server` | Rule governance API and diagnostic help center. |
+
+## Big Picture
+
+```text
+Analyzer package = execution engine
+Remote rules = policy
+Local cache = deterministic analysis input
+CLI = sync, validation, diagnostics, CI integration
+Server = governance, versioning, distribution
+```
+
+Zerberuz should download declarative rule definitions, not executable analyzer logic.
+
+## Getting Started
+
+Initialize a repository:
+
+```bash
+zerberuz init --profile backend-clean-architecture
+zerberuz sync-rules
+dotnet build
+```
+
+The analyzer reads `.zerberuz/rules-cache.json` and reports diagnostics such as:
+
+```text
+ZBZ001: Interface 'Repository' must start with 'I'.
+ZBZ100: Service class 'OrderService' must be placed under a Services folder.
+```
+
+Each diagnostic should include a help link and be explainable from the CLI:
+
+```bash
+zerberuz explain ZBZ001
+```
+
+## Rule Configuration
+
+Example rule cache payload:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "rulesVersion": "2026.08.11",
+  "profile": "backend-clean-architecture",
+  "rules": [
+    {
+      "id": "ZBZ001",
+      "type": "naming",
+      "title": "Interfaces must start with I",
+      "severity": "warning",
+      "target": {
+        "symbolKind": "interface"
+      },
+      "condition": {
+        "nameMustMatch": "^I[A-Z].*"
+      },
+      "message": "Interface '{symbolName}' must start with 'I'."
+    }
+  ]
+}
+```
+
+## Design Principles
+
+- Analyzer execution must be deterministic.
+- The analyzer must not call remote services from Roslyn callbacks.
+- Rule definitions are data, not executable code.
+- Local cache files are immutable inputs during analysis.
+- `.editorconfig` owns severity overrides.
+- Every diagnostic should have useful human-facing help.
+- Performance budgets are part of acceptance criteria.
+
+## Project Shape
+
+```text
+src/
+  Zerberuz.Analyzers/
+  Zerberuz.Analyzers.Core/
+  Zerberuz.Analyzers.Rules/
+  Zerberuz.Analyzers.Configuration/
+  Zerberuz.Cli/
+  Zerberuz.Server/
+  Zerberuz.Server.Contracts/
+tests/
+samples/
+benchmarks/
+docs/
+agents/
+```
+
+See [agents/implementation-plan.md](agents/implementation-plan.md) for the full implementation plan.

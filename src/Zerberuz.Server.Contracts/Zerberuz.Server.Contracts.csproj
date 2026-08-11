@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zerberuz.Server.Contracts</PackageId>
+    <Title>Zerberuz.Server.Contracts</Title>
+    <Description>Shared contracts for Zerberuz rule payloads, profile versions, and diagnostic help content.</Description>
+    <PackageTags>zerberuz;contracts;diagnostics;rules;roslyn;analyzers</PackageTags>
+  </PropertyGroup>
+</Project>

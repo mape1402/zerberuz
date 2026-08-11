@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zerberuz.Analyzers</PackageId>
+    <Title>Zerberuz.Analyzers</Title>
+    <Description>Configurable Roslyn analyzers for naming, folder structure, architecture boundaries, and dependency governance.</Description>
+    <PackageTags>roslyn;analyzers;diagnostics;architecture;naming;code-quality;dotnet</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zerberuz.Analyzers.Configuration\Zerberuz.Analyzers.Configuration.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Zerberuz.Analyzers.Core\Zerberuz.Analyzers.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Zerberuz.Analyzers.Rules\Zerberuz.Analyzers.Rules.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+</Project>

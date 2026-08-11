@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Zerberuz.Benchmarks/Zerberuz.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Zerberuz.Samples.Basic/Zerberuz.Samples.Basic.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Zerberuz.Analyzers.Configuration/Zerberuz.Analyzers.Configuration.csproj" />
+    <Project Path="src/Zerberuz.Analyzers.Core/Zerberuz.Analyzers.Core.csproj" />
+    <Project Path="src/Zerberuz.Analyzers.Rules/Zerberuz.Analyzers.Rules.csproj" />
+    <Project Path="src/Zerberuz.Analyzers/Zerberuz.Analyzers.csproj" />
+    <Project Path="src/Zerberuz.Cli/Zerberuz.Cli.csproj" />
+    <Project Path="src/Zerberuz.Server.Contracts/Zerberuz.Server.Contracts.csproj" />
+    <Project Path="src/Zerberuz.Server/Zerberuz.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zerberuz.Analyzers.Configuration.Tests/Zerberuz.Analyzers.Configuration.Tests.csproj" />
+    <Project Path="tests/Zerberuz.Analyzers.Core.Tests/Zerberuz.Analyzers.Core.Tests.csproj" />
+    <Project Path="tests/Zerberuz.Analyzers.Rules.Tests/Zerberuz.Analyzers.Rules.Tests.csproj" />
+    <Project Path="tests/Zerberuz.Analyzers.Tests/Zerberuz.Analyzers.Tests.csproj" />
+    <Project Path="tests/Zerberuz.Cli.Tests/Zerberuz.Cli.Tests.csproj" />
+    <Project Path="tests/Zerberuz.Server.Tests/Zerberuz.Server.Tests.csproj" />
+  </Folder>
+</Solution>

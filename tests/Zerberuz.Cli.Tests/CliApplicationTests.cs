@@ -77,6 +77,16 @@ public sealed class CliApplicationTests
             Assert.Equal(0, exitCode);
             Assert.True(File.Exists(rulesCachePath));
             Assert.True(File.Exists(pointerPath));
+            Assert.True(File.Exists(Path.Combine(
+                cacheRoot,
+                "teams",
+                "elysium",
+                "profiles",
+                "backend",
+                "versions",
+                "2026.08.11",
+                "help",
+                "ZBZ001.md")));
             Assert.Contains("Synced elysium/backend@2026.08.11", output.ToString());
             Assert.Equal(string.Empty, error.ToString());
         }
@@ -247,6 +257,53 @@ public sealed class CliApplicationTests
     }
 
     [Fact]
+    public void Run_explain_offline_reads_markdown_help_from_shared_cache()
+    {
+        var tempRoot = CreateTempDirectory();
+        try
+        {
+            var configPath = Path.Combine(tempRoot, "zerberuz.json");
+            var sourcePath = Path.Combine(tempRoot, "rules.json");
+            var cacheRoot = Path.Combine(tempRoot, "cache");
+
+            File.WriteAllText(configPath, """
+            {
+              "team": "elysium",
+              "profile": "backend",
+              "rulesVersion": "latest-compatible"
+            }
+            """);
+
+            File.WriteAllText(sourcePath, ValidRuleSetWithDetailedHelp);
+
+            _ = new CliApplication().Run(
+                new[] { "sync-rules", "--source", sourcePath, "--config-path", configPath, "--cache-root", cacheRoot },
+                new StringWriter(),
+                new StringWriter(),
+                File.Exists,
+                File.ReadAllText);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var exitCode = new CliApplication().Run(
+                new[] { "explain", "ZBZ001", "--offline", "--config-path", configPath, "--cache-root", cacheRoot },
+                output,
+                error,
+                File.Exists,
+                File.ReadAllText);
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("# ZBZ001: Interfaces must start with I", output.ToString());
+            Assert.Contains("Rename the interface.", output.ToString());
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Run_init_returns_error_when_configuration_exists()
     {
         var output = new StringWriter();
@@ -352,6 +409,46 @@ public sealed class CliApplicationTests
         {
           "diagnosticId": "ZBZ001",
           "title": "Interfaces must start with I"
+        }
+      ]
+    }
+    """;
+
+    private const string ValidRuleSetWithDetailedHelp = """
+    {
+      "schemaVersion": "1.0",
+      "rulesVersion": "2026.08.11",
+      "profile": "backend",
+      "rules": [
+        {
+          "id": "ZBZ001",
+          "type": "naming",
+          "title": "Interfaces must start with I",
+          "severity": "warning",
+          "target": {
+            "symbolKind": "interface"
+          },
+          "condition": {
+            "mustStartWith": "I"
+          },
+          "message": "Interface '{symbolName}' must start with 'I'."
+        }
+      ],
+      "help": [
+        {
+          "diagnosticId": "ZBZ001",
+          "title": "Interfaces must start with I",
+          "summary": "Interface names must use the configured prefix.",
+          "why": "Consistent interface naming improves scanning.",
+          "trigger": "An interface name did not match the rule.",
+          "badExample": "public interface Repository { }",
+          "goodExample": "public interface IRepository { }",
+          "fixSteps": [
+            "Rename the interface.",
+            "Update all references."
+          ],
+          "suppressionGuidance": "Suppress only for external contracts.",
+          "relatedDiagnostics": [ "ZBZ100" ]
         }
       ]
     }

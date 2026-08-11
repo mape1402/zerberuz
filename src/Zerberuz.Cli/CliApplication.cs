@@ -115,6 +115,7 @@ public sealed class CliApplication
             ResolveOption(args, "--cache-root"));
 
         AtomicWriteValidatedRuleSet(paths.RulesCachePath, payload);
+        ExportHelpMarkdown(paths.HelpDirectory, ruleSet!.Help);
         AtomicWriteText(
             paths.LatestCompatiblePointerPath,
             JsonSerializer.Serialize(
@@ -228,6 +229,11 @@ public sealed class CliApplication
         }
 
         var diagnosticId = args[0];
+        if (args.Contains("--offline", StringComparer.Ordinal))
+        {
+            return ExplainOffline(diagnosticId, args, output, error);
+        }
+
         var cachePath = ResolveOption(args, "--cache-path") ?? ".zerberuz/rules-cache.json";
 
         if (!fileExists(cachePath))
@@ -247,6 +253,47 @@ public sealed class CliApplication
         }
 
         WriteHelp(help, output);
+        return 0;
+    }
+
+    private static int ExplainOffline(
+        string diagnosticId,
+        string[] args,
+        TextWriter output,
+        TextWriter error)
+    {
+        var configPath = ResolveOption(args, "--config-path") ?? "zerberuz.json";
+        if (!File.Exists(configPath))
+        {
+            error.WriteLine($"Configuration was not found: {configPath}");
+            return 7;
+        }
+
+        var configuration = ZerberuzProjectConfiguration.Load(File.ReadAllText(configPath));
+        var paths = new SharedCachePathResolver().Resolve(
+            configuration,
+            ResolveOption(args, "--cache-root"));
+
+        var rulesCachePath = ResolveRulesCachePath(configuration, paths);
+        if (string.IsNullOrWhiteSpace(rulesCachePath))
+        {
+            error.WriteLine("Resolved rule cache was not found.");
+            return 9;
+        }
+
+        var helpPath = Path.Combine(
+            Path.GetDirectoryName(rulesCachePath)!,
+            "help",
+            diagnosticId + ".md");
+
+        if (!File.Exists(helpPath))
+        {
+            error.WriteLine($"Offline help was not found for diagnostic '{diagnosticId}'.");
+            error.WriteLine($"Help: {helpPath}");
+            return 10;
+        }
+
+        output.Write(File.ReadAllText(helpPath));
         return 0;
     }
 
@@ -335,6 +382,71 @@ public sealed class CliApplication
         }
     }
 
+    private static void ExportHelpMarkdown(
+        string helpDirectory,
+        IEnumerable<DiagnosticHelpDefinition> helpDefinitions)
+    {
+        Directory.CreateDirectory(helpDirectory);
+        foreach (var help in helpDefinitions)
+        {
+            if (string.IsNullOrWhiteSpace(help.DiagnosticId))
+            {
+                continue;
+            }
+
+            AtomicWriteText(
+                Path.Combine(helpDirectory, help.DiagnosticId + ".md"),
+                RenderHelpMarkdown(help));
+        }
+    }
+
+    private static string RenderHelpMarkdown(DiagnosticHelpDefinition help)
+    {
+        using var writer = new StringWriter();
+        writer.WriteLine($"# {help.DiagnosticId}: {help.Title}");
+        WriteMarkdownSection(writer, "Summary", help.Summary);
+        WriteMarkdownSection(writer, "Why", help.Why);
+        WriteMarkdownSection(writer, "Trigger", help.Trigger);
+        WriteMarkdownSection(writer, "Bad Example", help.BadExample);
+        WriteMarkdownSection(writer, "Good Example", help.GoodExample);
+
+        if (help.FixSteps.Count > 0)
+        {
+            writer.WriteLine();
+            writer.WriteLine("## Fix");
+            for (var index = 0; index < help.FixSteps.Count; index++)
+            {
+                writer.WriteLine($"{index + 1}. {help.FixSteps[index]}");
+            }
+        }
+
+        WriteMarkdownSection(writer, "Suppression", help.SuppressionGuidance);
+
+        if (help.RelatedDiagnostics.Count > 0)
+        {
+            writer.WriteLine();
+            writer.WriteLine("## Related");
+            foreach (var related in help.RelatedDiagnostics)
+            {
+                writer.WriteLine($"- {related}");
+            }
+        }
+
+        return writer.ToString();
+    }
+
+    private static void WriteMarkdownSection(TextWriter writer, string title, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        writer.WriteLine();
+        writer.WriteLine($"## {title}");
+        writer.WriteLine(value);
+    }
+
     private static void WriteSection(TextWriter output, string title, string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -362,6 +474,7 @@ public sealed class CliApplication
         output.WriteLine("  zerberuz sync-rules --source <file-or-url> [--config-path zerberuz.json] [--cache-root <path>]");
         output.WriteLine("  zerberuz doctor [--config-path zerberuz.json] [--cache-root <path>]");
         output.WriteLine("  zerberuz explain ZBZ001 [--cache-path .zerberuz/rules-cache.json]");
+        output.WriteLine("  zerberuz explain ZBZ001 --offline [--config-path zerberuz.json] [--cache-root <path>]");
     }
 
     private static int WriteUnknownCommand(string command, TextWriter error)
